@@ -203,19 +203,28 @@ JSON out by default, `--pretty` for humans.
 
 ## 9. Open questions (to plan together)
 
+Progress and decisions are tracked on the dashboard's roadmap page
+(`docs/system1/roadmap.html`) — updated in GitHub every time something
+completes. Decided 2026-10-21: first test novel = re-ingest the legacy
+Index corpus; work LLM for testing = DeepSeek API; embeddings = a
+lightweight local CPU model (~500–1000 dims) with Jev post-selection
+over the top-32 vector candidates; name candidates = hybrid (below).
+
 - **Patch catalog details** — the full candidate list is on the System 1
   page. Which patches are v1, which wait? Current skeleton: scene
   boundary, dialogue detector, name detector, presence, speaker.
-- **Name-candidate generation** — how does the name detector propose
-  *candidate* spans for new names (speech-verb patterns, quote-adjacent
-  capitalized/CJK sequences, work-LLM nomination)? Patch interface is
-  ready; the generator is not decided.
+- **Name-candidate generation** — DECIDED: plain-text scan against a
+  cumulative registry of every name ever seen in the novel; a new
+  candidate triggers a zero-context LLM call to extract the new name.
+  Remaining: which surface patterns nominate candidate spans.
 - **Merge revision granularity** — when the main agent sends a ChangeSet
   back, what is the unit of revision: a proposal, a scene, a patch's
   whole output for the block?
 - **Confidence thresholds** — starting proposal: accept ≥ 0.85,
   re-ask 0.55–0.85, escalate < 0.55 (per patch). To tune with the test key.
-- **First test novel** — which sample novel is the first end-to-end case?
-- **Embedding provider/model** — locks the vector index dimension.
-- **Jev access route** — direct `api.typesafe.ai` vs. gateway; settled
-  when the key is handed over (secure entry, never in chat).
+- **First test novel** — DECIDED: re-ingest the legacy Index corpus.
+- **Embedding provider/model** — DECIDED: lightweight local model on
+  CPU (~500–1000 dims) + Jev post-selection over top-32 candidates.
+  Exact model picked in Phase 1.
+- **Jev access route** — he has an API and will provide it later;
+  route (direct vs. gateway) settled at handover, via secure entry.

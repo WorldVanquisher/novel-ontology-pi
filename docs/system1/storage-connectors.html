@@ -51,6 +51,7 @@ through one <code>OntologyStore</code> interface.</p>
   <li><b>GraphRAG in one engine:</b> a question seeds via vector similarity (event summaries) and FTS (exact names), then Cypher traverses — causal chains, presence, timeline order — from the seeds.</li>
   <li><b>Closed schema, designed once:</b> Ladybug requires declared node/relation tables (<code>src/ontology/schema.ts</code>). The English vocabulary is schema v1; new types arrive as CLI migrations.</li>
   <li><b>One writer, many readers:</b> only the merge gate writes; queries open read-only. That matches Ladybug's concurrency model exactly — and the CLI's.</li>
+  <li><b>Retrieval = small-model recall + Jev precision (decided 2026-10-21):</b> embeddings come from a lightweight local model that runs fast on CPU (~500–1000 dimensions). Vector search returns the <b>top 32</b> candidates; <b>Jev post-selects</b> among them — the small model's recall is wide, the decision model restores the accuracy a bigger embedder would have given.</li>
   <li><b>Vector dimension is manifest data:</b> the embedding model + dimension are recorded per novel; changing models triggers <code>novel graph reindex</code>, not silent corruption.</li>
 </ul>
 
@@ -65,7 +66,7 @@ through one <code>OntologyStore</code> interface.</p>
 <h2>Open questions — storage</h2>
 <div class="panel">
   <ul class="tight oq" style="font-size:14px">
-    <li>Embedding provider.<span>Default to the work LLM provider's embedding endpoint, bundle a small local model, or both? This locks the index dimension per novel — the manifest records it, but the default UX matters.</span></li>
+    <li>Embedding provider — <span class="status done">✓ decided 2026-10-21</span><span>Lightweight local model on CPU, ~500–1000 dims, with Jev post-selection over the top-32 vector candidates. Remaining: the exact model (decided in Phase 1 when the first graph is built).</span></li>
     <li>Incremental sync.<span>After each approved block, append deltas to Ladybug incrementally, or rebuild per block? Rebuild is simpler and safe; incremental is faster for long novels. Where's the crossover?</span></li>
     <li>Library layout.<span>Many novels, one user: a <code>novels/</code> library folder with per-novel bundles — plus a cross-novel index? (Cross-novel character universes are a real light-novel pattern…)</span></li>
     <li>Bundle in git.<span>Should a novel's bundle live in its own git repo for history/diffing of merges? ChangeSets map naturally to commits.</span></li>

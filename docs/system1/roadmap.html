@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roadmap — novel-ontology-pi design dashboard</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="kicker">dashboard · implementation timeline</div>
+<h1>Roadmap — implementation order &amp; decision log</h1>
+<p class="sub">The work, sequenced. Each phase lists what gets built (with the sectors it touches),
+the milestone that ends it, and the open questions that get decided <i>in that phase</i> — nothing
+is decided earlier than it needs to be.</p>
+<div class="panel" style="border-color:var(--teal)">
+  <b>Update rule:</b> this page is updated in GitHub <b>every time something is completed</b> —
+  phase statuses and the decision log here are the project's progress record of truth.
+  <span style="color:var(--dim)">Last updated: 2026-10-21 · Phase 0 complete, five Phase-1 decisions logged.</span>
+</div>
+
+<div class="rtl">
+
+  <div class="rphase done">
+    <h3>Phase 0 — Foundation <span class="status done">✓ done · 2026-10-21</span></h3>
+    <ul>
+      <li>Founding design (DESIGN.md), English-canonical schema v1, Pi Skill</li>
+      <li>CLI skeleton: sectioning working, miniloop + v1 decision patches, ChangeSet / merge machinery</li>
+      <li>Connector interfaces: Ladybug · bundle · Jev · work LLM — tests green with a mocked Jev</li>
+      <li>This design dashboard: overview + 12 sector pages + single-file viewer</li>
+    </ul>
+    <p class="mile">Milestone: repo live at gardianofthedarkness/novel-ontology-pi, skeleton verified.</p>
+  </div>
+
+  <div class="rphase now">
+    <h3>Phase 1 — Live, end to end, on one test novel <span class="status now">● next</span></h3>
+    <ul>
+      <li><b>Storage wiring</b> (10): Ladybug driver in — bundle → graph build → Cypher queries back</li>
+      <li><b>Model wiring</b> (07/08): Jev client live; DeepSeek as the work LLM via the provider layer</li>
+      <li><b>Block cutting</b> (01): chapter detection for the Index corpus format; blocks defined</li>
+      <li><b>Embeddings live</b> (10): local CPU model (~500–1000 dims) + Jev top-32 post-selection</li>
+      <li><b>Extraction step</b> (08): per-scene LLM extraction inside the block processor</li>
+      <li><b>Gate tooling</b> (09): ChangeSet persistence + <code>changeset</code> review commands</li>
+    </ul>
+    <p class="mile">Milestone: one real chapter of Index → ChangeSet → main-agent review → merged into Ladybug → queried back.</p>
+    <p style="color:var(--dim);font-size:13px">Waiting on: Jev key handover (secure entry) · exact local embedding model pick.</p>
+  </div>
+
+  <div class="rphase">
+    <h3>Phase 2 — Miniloop quality <span class="status plan">planned</span></h3>
+    <ul>
+      <li><b>Name candidates, full build</b> (04): cumulative per-novel name registry scan + zero-context LLM extraction for new names</li>
+      <li><b>Calibration</b> (07): gate thresholds + window size measured on a golden chapter</li>
+      <li><b>Presence ranges</b> (05): entrances/exits mid-scene · <b>speech-tag attachment</b> (03)</li>
+      <li><b>Story-so-far digest</b> (07): cross-window memory in the state summary</li>
+    </ul>
+    <p class="mile">Milestone: the miniloop's decisions are measured, not hoped — precision/recall known per patch.</p>
+  </div>
+
+  <div class="rphase">
+    <h3>Phase 3 — Whole-novel ingestion <span class="status plan">planned</span></h3>
+    <ul>
+      <li><b>Gate at scale</b> (09): revision granularity, review digest, cross-block consistency checks</li>
+      <li><b>Storage at scale</b> (10): incremental Ladybug sync, multi-novel library layout</li>
+      <li><b>Robustness</b> (01/02/03/04/06): damaged text, unquoted dialogue, style profiles, name collisions, cross-language merges, first-person narration, scene granularity</li>
+    </ul>
+    <p class="mile">Milestone: a full novel ingested block by block, human hands only at the gate.</p>
+  </div>
+
+  <div class="rphase">
+    <h3>Phase 4 — The use phase <span class="status plan">planned</span></h3>
+    <ul>
+      <li><b>Timelines &amp; forking</b> (11): fork-point browser, branch creation, pinned state snapshots, divergence scoring</li>
+      <li><b>Simulation v1</b> (12): one character, folded state, voice from their own turns, Jev referee in flag-only mode</li>
+    </ul>
+    <p class="mile">Milestone: pick a time point, fork the world, talk to someone who lives there.</p>
+  </div>
+
+  <div class="rphase">
+    <h3>Phase 5 — Expansion <span class="status plan">planned</span></h3>
+    <ul>
+      <li>Multi-character simulation (12) · branch auto-discovery (11) · auto-approval envelope (09)</li>
+      <li>Bundle-in-git (10) · candidate patches: addressee, state-change, event-worthiness, causal-candidate, coreference, foreshadowing</li>
+      <li>Discord as a thin client over the CLI</li>
+    </ul>
+    <p class="mile">Milestone: the platform the original Discord bot wanted to be — on the new foundation.</p>
+  </div>
+
+</div>
+
+<h2>Decision log</h2>
+<table class="dec">
+  <tr><th style="width:36px">#</th><th>Decision</th><th>Choice</th><th style="width:150px">Status</th></tr>
+  <tr><td>1</td><td>First test novel</td><td>Re-ingest the legacy <i>Index</i> corpus</td><td><span class="status done">✓ decided</span></td></tr>
+  <tr><td>2</td><td>Jev access</td><td>He has an API; route settled at handover</td><td><span class="status now">key pending</span></td></tr>
+  <tr><td>3</td><td>Work LLM for testing</td><td>DeepSeek API (his), via the Pi provider layer</td><td><span class="status done">✓ decided</span></td></tr>
+  <tr><td>4</td><td>Embedding model</td><td>Lightweight local model, fast on CPU, ~500–1000 dims; vector recall top-32 → <b>Jev post-selection</b> for precision</td><td><span class="status done">✓ decided</span> <span style="color:var(--dim)">(exact model in P1)</span></td></tr>
+  <tr><td>5</td><td>Name-candidate generation</td><td>Hybrid: plain-text scan against a <b>cumulative registry of every name ever seen in this novel</b>; a new candidate triggers a <b>zero-context LLM call</b> to extract the new name</td><td><span class="status done">✓ decided</span></td></tr>
+</table>
+
+<h2>How open questions map to phases</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Phase 1:</b> block cutting &amp; chapter detection (01) · embedding model pick (10) · state dimensions default from legacy (08)</li>
+  <li><b>Phase 2:</b> thresholds &amp; window size (07) · off-screen presence (05) · escalation budget (07)</li>
+  <li><b>Phase 3:</b> revision granularity, review digest, auto-approval pre-checks (09) · incremental sync, library layout, bundle-in-git (10) · scene granularity &amp; soft boundaries (02) · thought conventions &amp; nested quotation (03) · collisions &amp; title-vs-alias (04) · groups &amp; non-person presence (05)</li>
+  <li><b>Phase 4:</b> divergence measure, branch-of-branch, canon updates under branches (11) · referee strictness, talk-becomes-story threshold (12)</li>
+  <li><b>Phase 5:</b> branch auto-discovery (11) · multi-character turn-taking (12) · voice drift control (12)</li>
+</ul>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design dashboard · roadmap v0.1 · updated 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+</body>
+</html>

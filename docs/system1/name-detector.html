@@ -47,6 +47,14 @@ Then the <b>decision model</b> judges the leftovers: is this candidate a <b>new 
 <div class="qcard"><b>is_nickname_for</b> · <span class="prim choice">choice</span> — If this candidate is a nickname, epithet or title for an already-known character, which one? Options: every known character ID + "none".</div>
 
 <h2>Design details</h2>
+<div class="panel" style="border-color:var(--teal)">
+  <b>✓ Decided 2026-10-21 — how candidates are generated (the hybrid):</b>
+  the scan runs in plain text against a <b>cumulative registry of every name that has ever
+  existed in this novel</b> — the registry only grows, so a name learned in chapter 2 is free
+  forever. When the scan surfaces a genuinely <b>new</b> candidate, a <b>zero-context LLM call</b>
+  — no accumulated story context, nothing to bias it toward an existing character — is used to
+  extract and confirm the new name before Jev judges new-vs-nickname as below.
+</div>
 <ul class="tight" style="font-size:14px">
   <li><b>Never ask the model what code knows:</b> a string that matches the alias table is a hit, full stop. Jev's context window is spent only on the unknown.</li>
   <li><b>Proposals, not writes:</b> a "new character" leaves this sector as an <code>upsert_entity</code> proposal in the block's ChangeSet. The work LLM fleshes the character out during extraction (08); the merge gate (09) decides if they enter the graph.</li>
@@ -63,7 +71,7 @@ Then the <b>decision model</b> judges the leftovers: is this candidate a <b>new 
 <h2>Open questions — name detection</h2>
 <div class="panel">
   <ul class="tight oq" style="font-size:14px">
-    <li>Candidate generation — the big one.<span>Where do candidate spans come from? Speech-verb patterns (X说道), quote-adjacent sequences, capitalization/CJK heuristics, work-LLM nomination — or a layered mix? This choice drives the sector's recall.</span></li>
+    <li>Candidate generation — <span class="status done">✓ decided 2026-10-21</span><span>Hybrid: cumulative per-novel name registry scanned in plain text; new candidates go to a zero-context LLM call for extraction (see Design details). Remaining sub-question: which surface patterns nominate a span as a "candidate" for the registry check in the first place.</span></li>
     <li>Name collisions.<span>Two different people sharing a name (common in long novels, and across generations) — how does the sector know a "known" hit is actually the other person?</span></li>
     <li>Cross-language forms.<span>The same character as 美琴 / Misaka / ミサカ — one entity, three surface forms. Who proposes the merge: this sector, extraction, or the main agent at the gate?</span></li>
     <li>Titles vs. aliases.<span>Is 姐姐大人 an alias of Mikoto, or an ADDRESSES relation from Kuroko? The schema supports both — the sector needs a rule.</span></li>

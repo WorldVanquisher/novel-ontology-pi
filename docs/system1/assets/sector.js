@@ -23,6 +23,7 @@ function renderNav() {
   if (!nav) return;
   const links = [
     `<a class="page ${here === "index.html" ? "here" : ""}" href="index.html">Overview</a>`,
+    `<a class="page ${here === "roadmap.html" ? "here" : ""}" href="roadmap.html">🗺 Roadmap</a>`,
     ...SECTORS.map(
       (s) =>
         `<a class="page ${here === s.slug + ".html" ? "here" : ""}" href="${s.slug}.html">${s.n} ${s.label}</a>`,
@@ -35,9 +36,10 @@ function renderPager() {
   const here = location.pathname.split("/").pop() || "index.html";
   const el = document.getElementById("pager");
   if (!el) return;
-  const order = ["index.html", ...SECTORS.map((s) => s.slug + ".html")];
+  const order = ["index.html", "roadmap.html", ...SECTORS.map((s) => s.slug + ".html")];
   const names = {
     "index.html": "Overview",
+    "roadmap.html": "Roadmap",
     ...Object.fromEntries(SECTORS.map((s) => [s.slug + ".html", `${s.n} ${s.label}`])),
   };
   const i = order.indexOf(here);

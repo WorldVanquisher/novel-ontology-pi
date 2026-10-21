@@ -197,3 +197,27 @@ table.io th{color:var(--dim);font-weight:600;width:130px;background:var(--panel2
 .chatline.user{background:#232a4a;border:1px solid var(--indigo);margin-left:auto}
 .statebar{height:7px;background:#131a29;border-radius:4px;overflow:hidden}
 .statebar i{display:block;height:100%;background:var(--violet);width:20%;transition:width 1s}
+
+/* ---------- roadmap ---------- */
+.rtl{position:relative;margin:18px 0 6px;padding-left:26px}
+.rtl::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:3px;border-radius:2px;
+  background:linear-gradient(180deg,var(--green) 0 12%,var(--teal) 12% 20%,#26304a 20% 100%)}
+.rphase{position:relative;margin:0 0 16px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:14px 18px}
+.rphase::before{content:"";position:absolute;left:-24px;top:20px;width:13px;height:13px;border-radius:50%;
+  background:var(--panel2);border:3px solid var(--faint)}
+.rphase.done::before{border-color:var(--green);background:var(--green)}
+.rphase.now{border-color:var(--teal)}
+.rphase.now::before{border-color:var(--teal);background:var(--teal);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(45,212,191,.5)}50%{box-shadow:0 0 0 7px rgba(45,212,191,0)}}
+.rphase h3{font-size:16.5px}
+.rphase .mile{color:var(--teal);font-size:13.5px}
+.rphase ul{margin:6px 0;padding-left:18px;color:var(--dim);font-size:13.5px}
+.rphase li{margin:3px 0}
+.status{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--dim);vertical-align:middle}
+.status.done{color:var(--green);border-color:var(--green)}
+.status.now{color:var(--teal);border-color:var(--teal)}
+.status.plan{color:var(--faint)}
+table.dec{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
+table.dec td,table.dec th{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+table.dec th{color:var(--dim);background:var(--panel2);font-weight:600}
