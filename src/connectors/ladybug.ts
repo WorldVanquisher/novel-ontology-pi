@@ -1,8 +1,10 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { EventSink } from "../events/types.js";
 import { Database, Connection } from "@ladybugdb/core";
 import type { QueryResult } from "@ladybugdb/core";
 import type { OntologyStore } from "../ontology/store.js";
 import { LADYBUG_DDL } from "../ontology/schema.js";
-import { BundleStore } from "./bundle.js";
 import type {
   Branch,
   CharacterStateAtPoint,
@@ -391,37 +393,48 @@ export class LadybugStore implements OntologyStore {
 export async function buildGraphFromBundle(
   bundleDir: string,
   dbPath: string,
+  emit?: EventSink,
 ): Promise<{ entities: number; events: number; scenes: number; relations: number; branches: number }> {
-  const bundle = new BundleStore(bundleDir);
+  // BundleStore.loadFile currently swallows all read/parse errors. A successful
+  // rebuild fact must not hide corruption or an I/O failure.
+  const load = async <T>(name: string): Promise<T[]> => {
+    let raw: string;
+    try { raw = await readFile(join(bundleDir, name), "utf8"); }
+    catch (err) { if ((err as NodeJS.ErrnoException).code === "ENOENT") return []; throw err; }
+    return raw.split("\n").filter((line) => line.trim()).map((line) => JSON.parse(line) as T);
+  };
   const store = new LadybugStore(dbPath);
-  await store.initSchema();
+  let counts;
+  try {
+    await store.initSchema();
 
-  const entities = await bundle.loadFile<Entity>("entities.jsonl");
-  for (const e of entities) await store.upsertEntity(e);
-  const timelines = await bundle.loadFile<Entity>("timelines.jsonl");
-  for (const t of timelines) await store.upsertEntity(t);
-  const events = await bundle.loadFile<OntEvent>("events.jsonl");
-  for (const ev of events) await store.upsertEvent(ev);
-  const scenes = await bundle.loadFile<Scene>("scenes.jsonl");
-  for (const s of scenes) await store.upsertScene(s);
-  const relations = await bundle.loadFile<Relation>("relations.jsonl");
-  let relApplied = 0;
-  for (const r of relations) {
-    try {
+    const entities = await load<Entity>("entities.jsonl");
+    for (const e of entities) await store.upsertEntity(e);
+    const timelines = await load<Entity>("timelines.jsonl");
+    for (const t of timelines) await store.upsertEntity(t);
+    const events = await load<OntEvent>("events.jsonl");
+    for (const ev of events) await store.upsertEvent(ev);
+    const scenes = await load<Scene>("scenes.jsonl");
+    for (const s of scenes) await store.upsertScene(s);
+    const relations = await load<Relation>("relations.jsonl");
+    let relApplied = 0;
+    for (const r of relations) {
+      // Only schema-unsupported types stay bundle-only. I/O/query failures fail
+      // the build instead of generating a false graph.rebuilt success event.
+      if (!REL_DEFS[r.type]) continue;
       await store.addRelation(r);
       relApplied++;
-    } catch {
-      // Relations whose type has no schema-v1 table stay bundle-only.
     }
-  }
-  const branches = await bundle.loadFile<Branch>("branches.jsonl");
-  for (const b of branches) await store.createBranch(b);
-  await store.close();
-  return {
-    entities: entities.length + timelines.length,
-    events: events.length,
-    scenes: scenes.length,
-    relations: relApplied,
-    branches: branches.length,
-  };
+    const branches = await load<Branch>("branches.jsonl");
+    for (const b of branches) await store.createBranch(b);
+    counts = {
+      entities: entities.length + timelines.length,
+      events: events.length,
+      scenes: scenes.length,
+      relations: relApplied,
+      branches: branches.length,
+    };
+  } finally { await store.close(); }
+  await emit?.({ type: "graph.rebuilt", counts });
+  return counts;
 }

@@ -4,6 +4,9 @@ import type { DecisionModel } from "../connectors/jev.js";
 import type { OntologyStore } from "../ontology/store.js";
 import type { ChangeSet } from "../merge/changeset.js";
 import { applyChangeSet } from "../merge/apply.js";
+import { saveChangeSet } from "../merge/changesetStore.js";
+import { EventLog } from "../events/log.js";
+import type { EventSink } from "../events/types.js";
 
 export type ReviewDecision = "approved" | "held" | "revision_requested";
 
@@ -32,6 +35,7 @@ export class BlockProcessor {
     private store: OntologyStore,
     private decisions: DecisionModel,
     private review: (cs: ChangeSet) => Promise<ReviewDecision>,
+    private observation: { novelDir?: string; emit?: EventSink } = {},
   ) {}
 
   async processNovel(blocks: { blockId: string; text: string }[]): Promise<{
@@ -41,9 +45,12 @@ export class BlockProcessor {
   }> {
     const mergedBlocks: string[] = [];
     const miniloop = new Miniloop(this.decisions);
+    const emit = this.observation.emit ?? (this.observation.novelDir ? new EventLog(this.observation.novelDir).emit : undefined);
 
     for (const block of blocks) {
+      await emit?.({ type: "block.started", blockId: block.blockId });
       const { sentences } = sectionBlock(block.text, mergedBlocks.length);
+      await emit?.({ type: "sectioned", blockId: block.blockId, sentences: sentences.length });
       let revisionRounds = 0;
       for (;;) {
         const result = await miniloop.runBlock({
@@ -52,10 +59,13 @@ export class BlockProcessor {
           knownEntities: [], // TODO: load from store before each block
           stateSummary: `Processing block ${block.blockId}.`,
         });
+        if (this.observation.novelDir) await saveChangeSet(this.observation.novelDir, result.changeset);
         const decision = await this.review(result.changeset);
+        result.changeset.status = decision;
+        if (this.observation.novelDir) await saveChangeSet(this.observation.novelDir, result.changeset);
         if (decision === "approved") {
           result.changeset.status = "approved";
-          await applyChangeSet(this.store, result.changeset);
+          await applyChangeSet(this.store, result.changeset, emit);
           mergedBlocks.push(block.blockId);
           break;
         }

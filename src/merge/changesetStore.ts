@@ -1,6 +1,8 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile, rename, unlink } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { ChangeSet, ChangeSetStatus } from "./changeset.js";
+import { EventLog } from "../events/log.js";
 
 /**
  * ChangeSet persistence — the merge gate's filing cabinet.
@@ -24,7 +26,26 @@ export async function saveChangeSet(
   const dir = changesetDir(novelDir);
   await mkdir(dir, { recursive: true });
   const path = join(dir, `${cs.id}.json`);
-  await writeFile(path, JSON.stringify(cs, null, 2));
+  let previous: ChangeSet | undefined;
+  try { previous = JSON.parse(await readFile(path, "utf8")) as ChangeSet; }
+  catch (err) { if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err; }
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, JSON.stringify(cs, null, 2), { flag: "wx" });
+    await rename(temporary, path);
+  } finally { await unlink(temporary).catch((err: NodeJS.ErrnoException) => { if (err.code !== "ENOENT") throw err; }); }
+  // Facts are emitted only after the persisted state is visible. Log failure is
+  // surfaced; this is not a transaction spanning the state file and the log.
+  const log = new EventLog(novelDir);
+  for (const proposal of cs.proposals) {
+    if (!previous?.proposals.some((p) => p.id === proposal.id)) {
+      await log.emit({ type: "proposal.added", changesetId: cs.id, proposal });
+    }
+  }
+  if (previous?.status !== cs.status) {
+    const status = cs.status === "pending_review" ? "pending" : cs.status;
+    await log.emit({ type: `changeset.${status}`, changesetId: cs.id, proposalIds: cs.proposals.map((p) => p.id) });
+  }
   return path;
 }
 
