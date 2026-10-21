@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confidence gates — System 1 Design · novel-ontology-pi</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="site">
+  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
+  <a class="page" href="index.html">Overview</a>
+  <a class="page" href="demo.html">Live demo</a>
+  <a class="page" href="patches.html">Decision patches</a>
+  <a class="page here" href="gates.html">Confidence gates</a>
+  <a class="page" href="merge-gate.html">Blocks &amp; merge gate</a>
+  <a class="page" href="questions.html">Open questions</a>
+</nav>
+
+<div class="kicker">system 1 · recursion on probabilities</div>
+<h1>Confidence gates — how a probability becomes a decision</h1>
+<p class="sub">Jev never says "yes" — it says "0.83". Deterministic code routes on that number,
+per patch, with three outcomes. This routing is what makes the miniloop <i>recursive</i>:
+uncertainty doesn't fail, it narrows.</p>
+
+<div class="panel">
+  <div class="gatebar">
+    <div class="marker"></div>
+    <span class="lbl" style="left:24%">‹ 0.55 · <b style="color:var(--rose)">escalate</b><br>subdivide the window, or hand this unit to the work LLM</span>
+    <span class="lbl" style="left:70%">0.55–0.85 · <b style="color:var(--amber)">re-ask</b><br>expand context (previous/next scene), decide again</span>
+    <span class="lbl" style="left:94%">≥ 0.85<br><b style="color:var(--green)">accept</b></span>
+  </div>
+</div>
+
+<div class="grid three">
+  <div class="card"><h3 style="color:var(--green)">Accept</h3>
+    <p>The decision enters the shared context, later patches build on it, and any proposal
+    it supports joins the block's ChangeSet with its confidence attached.</p></div>
+  <div class="card"><h3 style="color:var(--amber)">Re-ask with more context</h3>
+    <p>The window grows — the previous scene, the next sentences, more of the state summary —
+    and the same question is decided again. Most ambiguity in fiction is just missing context.</p></div>
+  <div class="card"><h3 style="color:var(--rose)">Escalate / subdivide</h3>
+    <p>Either the window splits smaller (a tangled paragraph becomes two simpler ones), or the
+    unit goes to the work LLM to adjudicate. Its verdict is written back and the loop continues.
+    A brand-new character candidate escalates immediately — discoveries deserve the big model.</p></div>
+</div>
+
+<h2>Why this shape</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Cost follows difficulty.</b> Jev calls are ~$0.042 per million input tokens and unmetered on output; the work LLM only ever sees the hard fragments.</li>
+  <li><b>Thresholds are per patch.</b> Speaker attribution can tolerate 0.80; presence — which feeds simulation state — holds at 0.85. Each patch carries its own gates in code.</li>
+  <li><b>Thresholds are tuned, not guessed.</b> The 0.85 / 0.55 split is a starting proposal, to be calibrated on a golden chapter once the Jev test key is wired. The Jev model version is pinned in the novel's manifest so tuned thresholds stay meaningful.</li>
+  <li><b>Nothing is silently decided.</b> Units that stay uncertain after escalation are listed in the ChangeSet review for the main agent — and the user — to see.</li>
+</ul>
+
+<div class="pager">
+  <a href="patches.html">← Decision patches</a>
+  <a href="merge-gate.html">Next: Blocks &amp; merge gate →</a>
+</div>
+
+<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
+Code: <code>src/autostep/miniloop.ts</code>, gates per patch in <code>src/autostep/patches/</code></footer>
+</div>
+</body>
+</html>

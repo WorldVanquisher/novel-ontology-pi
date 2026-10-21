@@ -8,7 +8,7 @@ parallel-universe story forking. Rebuild of
 embedded, no-Docker architecture.
 
 > **System 1 has its own detailed design page:**
-> [`docs/system1.html`](docs/system1.html) — the autostep miniloop,
+> [`docs/system1/index.html`](docs/system1/index.html) — the autostep miniloop,
 > decision patches, and the merge gate, with animations. This document
 > covers everything else and only summarizes System 1.
 
@@ -142,7 +142,7 @@ ChangeSets are also the audit trail: every node in the graph can answer
 "which block, which sentences, which patch, what confidence, who
 approved you."
 
-## 6. System 1 — summary (detail lives in docs/system1.html)
+## 6. System 1 — summary (detail lives in docs/system1/index.html)
 
 - **Decision patches.** Each functionality is an independent patch with
   its own Jev questions, primitives, and confidence gates:

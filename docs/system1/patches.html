@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision patches — System 1 Design · novel-ontology-pi</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="site">
+  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
+  <a class="page" href="index.html">Overview</a>
+  <a class="page" href="demo.html">Live demo</a>
+  <a class="page here" href="patches.html">Decision patches</a>
+  <a class="page" href="gates.html">Confidence gates</a>
+  <a class="page" href="merge-gate.html">Blocks &amp; merge gate</a>
+  <a class="page" href="questions.html">Open questions</a>
+</nav>
+
+<div class="kicker">system 1 · modular decisions</div>
+<h1>The patches — one functionality, one patch</h1>
+<p class="sub">Different functionalities need different questions, primitives and thresholds, so each
+is an independent <b>decision patch</b>. Patches run in a fixed order and hand their accepted
+decisions to the next via shared context. Adding a capability later = adding a patch —
+nothing else changes. <span class="badge v1">v1</span> patches are implemented in the skeleton;
+<span class="badge cand">candidate</span> patches are proposals, kept open to discuss.</p>
+
+<h2>How a patch works</h2>
+<div class="flow">
+  <div class="node"><b>1 · Receive</b><span>auto-sectioned sentences (IDs + text) + compact state: known entities, scene-so-far, last speaker</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>2 · Ask</b><span>its own batch of Jev questions — one API call for the whole window, all questions in parallel</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>3 · Interpret</b><span>probabilities → accepted decisions, ChangeSet proposals, or escalations (see gates)</span></div>
+</div>
+<p class="sub" style="margin-top:10px">The three Jev primitives:
+<span class="prim noul">noul</span> yes/no → probability &nbsp;·&nbsp;
+<span class="prim choice">choice</span> one pick from a fixed candidate set &nbsp;·&nbsp;
+<span class="prim score">score</span> rating on an ordered scale.
+Note the design consequence: <b>presence must be one noul per candidate</b> — choice can only ever return a single pick.</p>
+
+<h2>The catalog</h2>
+<div class="grid two" id="patchgrid"></div>
+
+<h2>Order matters</h2>
+<p class="sub">The v1 registry runs: <code>scene-boundary → dialogue-detector → name-detector →
+presence-detector → speaker-attribution</code>. Speaker attribution needs the present set;
+presence needs scene spans; the dialogue detector needs nothing but sentences — which is
+exactly why it goes early. A patch only ever consumes decisions patches before it accepted.</p>
+
+<div class="pager">
+  <a href="demo.html">← Live demo</a>
+  <a href="gates.html">Next: Confidence gates →</a>
+</div>
+
+<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
+Code: <code>src/autostep/patches/</code></footer>
+</div>
+<script>
+const PATCHES=[
+ {id:"scene-boundary", v1:true, prims:["noul"], desc:"Where does a scene start? Also records why — location change, time skip, POV shift.", io:"in: sentences · out: scene spans"},
+ {id:"dialogue-detector", v1:true, prims:["choice","noul"], desc:"Takes the sentence IDs from auto segregation and chooses which ones are dialogue; stitches multi-sentence turns into single dialogue units.", io:"in: sentences · out: dialogue units"},
+ {id:"name-detector", v1:true, prims:["code scan","noul","choice"], desc:"Code scans for existing names/aliases (free, certain). Jev then judges candidate spans: a new name? a new nickname for a known character?", io:"in: sentences + alias table · out: entity / alias proposals"},
+ {id:"presence-detector", v1:true, prims:["noul × candidates"], desc:"Which characters are in the scene — one yes/no per candidate, because choice returns a single pick. Protects present vs. merely mentioned.", io:"in: scene span + candidates · out: PRESENT_IN / MENTIONED_IN"},
+ {id:"speaker-attribution", v1:true, prims:["choice"], desc:"Which character a dialogue belongs to — candidates are the characters present, plus narrator and unknown.", io:"in: dialogue units + present set · out: turns (speaker, sentences)"},
+ {id:"addressee-detector", v1:false, prims:["choice"], desc:"Who is being spoken to — needed for SPEAKS_TO / ADDRESSES edges and multi-party scenes.", io:"candidate"},
+ {id:"state-change-detector", v1:false, prims:["noul"], desc:"Did this scene change a character's emotion, knowledge, location or relationships? Feeds STATE_BEFORE / STATE_AFTER.", io:"candidate"},
+ {id:"event-worthiness", v1:false, prims:["score"], desc:"Is this segment an event worth a node in the ontology, and how important is it? Importance also drives the fork-point browser.", io:"candidate"},
+ {id:"causal-candidate", v1:false, prims:["noul"], desc:"Does this event plausibly cause / follow from that earlier event? Proposes CAUSES edges for extraction to confirm.", io:"candidate"},
+ {id:"coreference", v1:false, prims:["choice"], desc:"Pronouns and unnamed mentions (“the girl”, “she”) — who do they refer to, among present + known characters + none?", io:"candidate"},
+ {id:"foreshadowing-flag", v1:false, prims:["noul"], desc:"Cheap to flag now, expensive to retrofit later: does this detail look planted for a future payoff?", io:"candidate — v2?"},
+];
+document.getElementById('patchgrid').innerHTML = PATCHES.map(p=>`
+ <div class="card"><h3><code>${p.id}</code> ${p.v1?'<span class="badge v1">v1</span>':'<span class="badge cand">candidate</span>'}</h3>
+ <p>${p.desc}</p>
+ <p>${p.prims.map(x=>`<span class="prim ${x.startsWith('noul')?'noul':x.startsWith('choice')?'choice':x.startsWith('score')?'score':''}">${x}</span>`).join(' ')}
+ <span style="color:var(--faint)"> · ${p.io}</span></p></div>`).join('');
+</script>
+</body>
+</html>

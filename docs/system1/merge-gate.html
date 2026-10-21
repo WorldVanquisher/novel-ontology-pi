@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blocks &amp; merge gate — System 1 Design · novel-ontology-pi</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="site">
+  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
+  <a class="page" href="index.html">Overview</a>
+  <a class="page" href="demo.html">Live demo</a>
+  <a class="page" href="patches.html">Decision patches</a>
+  <a class="page" href="gates.html">Confidence gates</a>
+  <a class="page here" href="merge-gate.html">Blocks &amp; merge gate</a>
+  <a class="page" href="questions.html">Open questions</a>
+</nav>
+
+<div class="kicker">processing model · the safety property</div>
+<h1>Rolling by block — and the merge gate</h1>
+<p class="sub">A novel is never ingested in one swallow. Processing rolls <b>chapter by chapter</b>
+(or by long block), and the System 1 miniloop is never allowed to write to the ontology main
+graph. It <i>proposes</i>. The main agent <i>decides</i>.</p>
+
+<h2>One block, five beats</h2>
+<div class="flow">
+  <div class="node"><b>1 · SECTION</b><span>code splits the block into sentences — stable IDs + offsets</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>2 · MINIloop</b><span>decision patches run; every conclusion becomes a proposal</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>3 · EXTRACT</b><span>work LLM reads the structured scenes; proposes events + causality</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>4 · ACCUMULATE</b><span>all proposals collect into one ChangeSet — graph untouched</span></div>
+  <div class="arrow">→</div>
+  <div class="node" style="border-color:var(--teal)"><b>5 · MERGE GATE</b><span>the main agent reviews</span></div>
+</div>
+
+<h2>The three verdicts</h2>
+<div class="panel">
+  <div class="gate-flow">
+    <div class="outcome approve" id="ocApprove"><span class="stamp" style="color:var(--green)">APPROVE</span>
+      <p style="color:var(--dim);font-size:13.5px">Proposals are applied to the main graph through the
+      OntologyStore. The next block rolls.</p></div>
+    <div class="outcome hold" id="ocHold"><span class="stamp" style="color:var(--amber)">HOLD</span>
+      <p style="color:var(--dim);font-size:13.5px">Nothing is applied. Processing pauses; the agent explains
+      why and consults the user.</p></div>
+    <div class="outcome revise" id="ocRevise"><span class="stamp" style="color:var(--rose)">REVISE</span>
+      <p style="color:var(--dim);font-size:13.5px">The agent names the parts it doubts; the miniloop re-runs
+      <i>only those parts</i> and returns a revised ChangeSet for the block.</p></div>
+  </div>
+  <p style="color:var(--dim);font-size:13.5px;margin-bottom:4px">Novel progress — blocks merged:</p>
+  <div class="novel-progress"><i id="novelFill"></i></div>
+  <p style="color:var(--faint);font-size:12.5px" id="novelLbl">block 0 of 12 merged</p>
+</div>
+
+<h2>Why an agent behind the gate</h2>
+<p class="sub">The miniloop is fast and local, but it cannot hold what the main agent holds:
+earlier chapters, naming consistency across a whole book, who a nickname in chapter 30 really
+belongs to, the user's intent. Making the fast system propose and the context-rich system
+decide is the core safety property of the design — and it is enforced in code, not by
+convention: the apply path refuses any ChangeSet whose status is not <code>approved</code>.</p>
+<p class="sub">ChangeSets double as the <b>audit trail</b>. Every node in the graph can answer:
+which block, which sentences, which patch, what confidence, whose approval. And when the last
+block merges, the novel the user asked for is done — the loop has a natural end.</p>
+
+<div class="pager">
+  <a href="gates.html">← Confidence gates</a>
+  <a href="questions.html">Next: Open questions →</a>
+</div>
+
+<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
+Code: <code>src/processing/blockProcessor.ts</code>, <code>src/merge/</code></footer>
+</div>
+<script>
+const outs=[...document.querySelectorAll('.outcome')];
+let gi=0, blocks=0;
+setInterval(()=>{
+  outs.forEach(o=>o.classList.remove('lit')); outs[gi].classList.add('lit');
+  if(gi===0){ blocks=Math.min(12, blocks+1);
+    document.getElementById('novelFill').style.width=(blocks/12*100)+'%';
+    document.getElementById('novelLbl').textContent=`block ${blocks} of 12 merged`;
+    if(blocks===12) blocks=0; }
+  gi=(gi+1)%3;
+}, 2400);
+</script>
+</body>
+</html>

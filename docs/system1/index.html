@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overview — System 1 Design · novel-ontology-pi</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="site">
+  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
+  <a class="page here" href="index.html">Overview</a>
+  <a class="page" href="demo.html">Live demo</a>
+  <a class="page" href="patches.html">Decision patches</a>
+  <a class="page" href="gates.html">Confidence gates</a>
+  <a class="page" href="merge-gate.html">Blocks &amp; merge gate</a>
+  <a class="page" href="questions.html">Open questions</a>
+</nav>
+
+<div class="kicker">detailed design · overview</div>
+<h1>System 1 — The Autostep Miniloop</h1>
+<p class="sub">The fast, local decision system inside the CLI. It reads a novel the way a careful
+reader skims structure — where scenes break, which sentences are dialogue, whose names appear,
+who is actually in the room, who is speaking. It <b>decides structure</b>; it never writes the
+ontology. Everything it concludes becomes a proposal for the main agent to approve at the merge gate.</p>
+<p>
+  <span class="badge v1">design v0.1</span>
+  <span class="badge open">patch catalog: open for discussion</span>
+  <span class="badge">companion: <a href="../../DESIGN.md">DESIGN.md</a></span>
+</p>
+
+<h2>The architecture</h2>
+<div class="panel" style="padding:10px">
+<svg class="arch" viewBox="0 0 1180 640" role="img" aria-label="Architecture graph of novel-ontology-pi">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3d4a6b"></path>
+    </marker>
+  </defs>
+
+  <!-- USER -->
+  <rect class="box" x="16" y="270" width="158" height="120" rx="12"></rect>
+  <text class="title" x="95" y="298" text-anchor="middle">👤 User</text>
+  <text class="small" x="95" y="320" text-anchor="middle">drops in a novel</text>
+  <text class="small" x="95" y="338" text-anchor="middle">provides 2 API keys</text>
+  <text class="small" x="95" y="356" text-anchor="middle">selects fork points</text>
+  <text class="small" x="95" y="374" text-anchor="middle">asks · simulates</text>
+
+  <!-- SYSTEM 2 ZONE -->
+  <rect class="zone" x="206" y="14" width="660" height="104" rx="16"></rect>
+  <text class="zonelabel" x="222" y="36">SYSTEM 2 — MAIN AGENT</text>
+  <rect class="box sys2" x="330" y="44" width="340" height="56" rx="12"></rect>
+  <text class="title" x="500" y="69" text-anchor="middle">Pi agent + SKILL.md</text>
+  <text class="small" x="500" y="87" text-anchor="middle">workflows · merge reviewer · memory + context</text>
+
+  <!-- SYSTEM 1 ZONE -->
+  <rect class="zone" x="206" y="140" width="660" height="330" rx="16"></rect>
+  <text class="zonelabel" x="222" y="162">SYSTEM 1 — THE CLI</text>
+
+  <rect class="box" x="226" y="186" width="180" height="62" rx="12"></rect>
+  <text class="title" x="316" y="211" text-anchor="middle">✂️ Sectioning</text>
+  <text class="small" x="316" y="229" text-anchor="middle">code only · sentences + IDs</text>
+
+  <rect class="box sys1" x="446" y="186" width="210" height="62" rx="12"></rect>
+  <text class="title" x="551" y="211" text-anchor="middle">🧠 Autostep miniloop</text>
+  <text class="small" x="551" y="229" text-anchor="middle">decision patches over Jev</text>
+
+  <rect class="box" x="686" y="186" width="164" height="62" rx="12"></rect>
+  <text class="title" x="768" y="211" text-anchor="middle">📚 Extraction</text>
+  <text class="small" x="768" y="229" text-anchor="middle">work LLM, per scene</text>
+
+  <rect class="box" x="226" y="286" width="180" height="62" rx="12"></rect>
+  <text class="title" x="316" y="311" text-anchor="middle">⌘ CLI commands</text>
+  <text class="small" x="316" y="329" text-anchor="middle">query · fork · simulate</text>
+
+  <rect class="box" x="446" y="286" width="210" height="62" rx="12"></rect>
+  <text class="title" x="551" y="311" text-anchor="middle">📝 ChangeSet</text>
+  <text class="small" x="551" y="329" text-anchor="middle">proposals accumulate per block</text>
+
+  <rect class="box sys1" x="686" y="286" width="164" height="62" rx="12"></rect>
+  <text class="title" x="768" y="311" text-anchor="middle">🛂 Merge gate</text>
+  <text class="small" x="768" y="329" text-anchor="middle">applies on approval only</text>
+
+  <!-- STORAGE ZONE -->
+  <rect class="zone" x="206" y="492" width="660" height="118" rx="16"></rect>
+  <text class="zonelabel" x="222" y="514">ONTOLOGY STORAGE — EMBEDDED, NO DOCKER</text>
+  <rect class="box" x="226" y="524" width="280" height="62" rx="12"></rect>
+  <text class="title" x="366" y="549" text-anchor="middle">📦 Bundle (JSONL)</text>
+  <text class="small" x="366" y="567" text-anchor="middle">source of truth · portable · git-friendly</text>
+  <rect class="box" x="546" y="524" width="300" height="62" rx="12"></rect>
+  <text class="title" x="696" y="549" text-anchor="middle">🐞 Ladybug — graph.lbug</text>
+  <text class="small" x="696" y="567" text-anchor="middle">Cypher · vector index · full-text search</text>
+
+  <!-- EXTERNAL APIS -->
+  <rect class="box ext" x="896" y="186" width="268" height="62" rx="12"></rect>
+  <text class="title" x="1030" y="211" text-anchor="middle">🎯 Jev — decision model</text>
+  <text class="small" x="1030" y="229" text-anchor="middle">noul · choice · score — user API #2</text>
+  <rect class="box ext" x="896" y="286" width="268" height="62" rx="12"></rect>
+  <text class="title" x="1030" y="311" text-anchor="middle">✍️ Work LLM</text>
+  <text class="small" x="1030" y="329" text-anchor="middle">generation model — user API #1</text>
+
+  <!-- EDGES -->
+  <path id="pIn" class="edge hot flowdash" d="M174 285 C 245 285, 245 72, 328 72"></path>
+  <text class="elabel" transform="rotate(-90 196 180)" x="196" y="180" text-anchor="middle">novel · requests · keys</text>
+
+  <path class="edge" d="M380 100 C 380 150, 316 150, 316 184"></path>
+  <text class="elabel" x="352" y="138" text-anchor="middle">CLI commands (JSON)</text>
+
+  <path class="edge" d="M406 217 L444 217"></path>
+  <text class="elabel" x="425" y="207" text-anchor="middle">IDs</text>
+  <path class="edge" d="M656 217 L684 217"></path>
+  <text class="elabel" x="670" y="207" text-anchor="middle">scenes</text>
+
+  <path id="pJev" class="edge jev flowdash" d="M656 200 C 760 158, 815 198, 894 205"></path>
+  <path class="edge jev" d="M894 232 C 815 258, 760 242, 658 234"></path>
+  <text class="elabel" x="778" y="152" text-anchor="middle">batched questions</text>
+  <text class="elabel" x="778" y="266" text-anchor="middle">probabilities</text>
+
+  <path class="edge llm" d="M850 205 L894 205"></path>
+  <path class="edge llm" d="M894 232 L852 232"></path>
+
+  <path class="edge" d="M551 248 L551 284"></path>
+  <text class="elabel" x="560" y="270">proposals</text>
+  <path class="edge" d="M740 248 L740 317 L658 317"></path>
+  <text class="elabel" x="748" y="286">events · causality</text>
+
+  <path class="edge" d="M656 317 L684 317"></path>
+  <text class="elabel" x="670" y="307" text-anchor="middle">pending</text>
+
+  <path id="pReview" class="edge hot flowdash" d="M742 286 C 742 150, 706 84, 672 70"></path>
+  <text class="elabel" x="756" y="180">ChangeSet for review ↑</text>
+  <text class="elabel" x="756" y="196">approve · hold · revise ↓</text>
+
+  <path id="pMerge" class="edge hot flowdash" d="M742 348 C 742 468, 420 478, 382 522"></path>
+  <text class="elabel" x="590" y="466" text-anchor="middle">approved merge only</text>
+
+  <path class="edge" d="M316 348 C 316 470, 302 500, 302 522"></path>
+  <text class="elabel" transform="rotate(-90 292 440)" x="292" y="440" text-anchor="middle">queries read the graph</text>
+
+  <path class="edge" d="M506 555 L544 555"></path>
+  <text class="elabel" x="525" y="545" text-anchor="middle">rebuild</text>
+
+  <path class="edge" d="M700 586 L700 624 L95 624 L95 392"></path>
+  <text class="elabel" x="400" y="616" text-anchor="middle">answers · character simulation · parallel-universe forks</text>
+
+  <!-- moving pulses -->
+  <circle class="pulse" r="4"><animateMotion dur="3.2s" repeatCount="indefinite"><mpath href="#pIn"/></animateMotion></circle>
+  <circle class="pulse" r="4" fill="#c084fc"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#pJev"/></animateMotion></circle>
+  <circle class="pulse" r="4"><animateMotion dur="3.8s" repeatCount="indefinite"><mpath href="#pMerge"/></animateMotion></circle>
+</svg>
+</div>
+
+<p class="sub"><b>Rule zero:</b> never ask a model what code can compute exactly. Sectioning, offsets,
+and scanning for <i>known</i> names are code. Jev is only asked genuinely ambiguous questions — and it
+answers with probabilities, not text, in ~70–500&nbsp;ms, batched: one call per window, all questions at once.
+The one hard boundary in the graph: <b>nothing crosses from ChangeSet to storage except through the
+merge gate, on the main agent's approval.</b></p>
+
+<h2>The pages</h2>
+<div class="grid three">
+  <a class="card" href="demo.html"><h3>▶ Live demo</h3>
+    <p>One block, seven sentences, animated end to end: sectioning → scene boundary → dialogue →
+    names → presence → speakers → ChangeSet.</p><span class="go">Watch it run →</span></a>
+  <a class="card" href="patches.html"><h3>🧩 Decision patches</h3>
+    <p>One functionality = one patch, each with its own Jev questions, primitives and gates.
+    The v1 set, plus the candidate catalog.</p><span class="go">See the patches →</span></a>
+  <a class="card" href="gates.html"><h3>🎚 Confidence gates</h3>
+    <p>How a probability becomes a decision: accept, re-ask with more context, subdivide,
+    or escalate to the work LLM.</p><span class="go">See the gates →</span></a>
+  <a class="card" href="merge-gate.html"><h3>🛂 Blocks &amp; merge gate</h3>
+    <p>Processing rolls chapter by chapter; every block's proposals wait at the gate for the
+    main agent: approve, hold, or revise.</p><span class="go">See the gate →</span></a>
+  <a class="card" href="questions.html"><h3>❓ Open questions</h3>
+    <p>Everything deliberately left undecided, to plan together: the patch catalog, revision
+    granularity, thresholds, windowing, and more.</p><span class="go">See what's open →</span></a>
+  <a class="card" href="../../DESIGN.md"><h3>📐 DESIGN.md</h3>
+    <p>The overall architecture in document form: storage, schema v1, CLI surface, model
+    routing, and the test plan.</p><span class="go">Read the doc →</span></a>
+</div>
+
+<h2>Two loops, in one breath</h2>
+<div class="flow">
+  <div class="node"><b>📖 Novel block</b><span>one chapter, or a long block, any language</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>✂️ Sectioning</b><span>deterministic code — sentences, IDs, offsets</span></div>
+  <div class="arrow">→</div>
+  <div class="node" style="border-color:var(--teal)"><b>🧠 Miniloop</b><span>decision patches over Jev</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>📝 ChangeSet</b><span>proposals for this block</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>🛂 Merge gate</b><span>main agent decides</span></div>
+</div>
+
+<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
+Code: <code>src/autostep/</code> · Doc: <a href="../../DESIGN.md">DESIGN.md</a></footer>
+</div>
+</body>
+</html>

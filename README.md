@@ -33,7 +33,7 @@ two API keys (one work LLM + one decision model), and start.
   language share one paradigm.
 
 📐 **Design:** [DESIGN.md](DESIGN.md) ·
-🧠 **System 1 in detail (animated):** [docs/system1.html](docs/system1.html)
+🧠 **System 1 in detail (animated):** [docs/system1/index.html](docs/system1/index.html)
 
 ## Quick start
 
