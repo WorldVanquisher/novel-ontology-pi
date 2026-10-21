@@ -96,11 +96,32 @@ strip; Jev's verdicts stream into the feed; the new character and events appear 
 the ghosts solidify with a pulse — then the camera dives to the timeline and a parallel-universe
 branch forks off. That loop, running on real data, is the product's front door.</p>
 
+<h2>Demo 2 — timeline zoom, two levels</h2>
+<div class="demo">
+  <div class="pg">
+    <div class="pgbar">
+      <span class="dot3" style="background:#f87171"></span><span class="dot3" style="background:#fbbf24"></span><span class="dot3" style="background:#34d399"></span>
+      <span id="zoomCrumb">timeline · 章范围总览 — big events</span>
+      <span class="live" style="color:var(--teal)"><i style="background:var(--teal)"></i>ZOOM DEMO</span>
+    </div>
+    <svg id="zoomSvg" viewBox="0 0 920 340" style="width:100%;display:block" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="caption" id="zoomCap">Level 1 — the chapter range: one node per BIG event (an event summary spanning part of a chapter), time flowing left → right.</div>
+</div>
+<p style="color:var(--dim);font-size:13.5px">The timeline has <b>two zoom levels</b>. <b>Level 1 (per
+chapter range):</b> each node is a <i>big event</i> — a summarized story beat that can span many scenes,
+strung along the canon timeline. <b>Level 2 (inside a big event):</b> clicking one dives into its
+<i>internal</i> timeline — the small scenes, dialogue turns and micro-events it contains, drawn as a
+scene cloud around an inner time axis, every edge arrowed in the direction time flows. Zooming is
+semantic, not just optical: past a threshold the summary node <i>becomes</i> its contents
+(Reagraph expand/collapse over the containment relations in the graph).</p>
+
 <h2>Design details</h2>
 <ul class="tight" style="font-size:14px">
   <li><b>Stack:</b> Vite + React + TypeScript; <b>Reagraph</b> (Apache-2.0) for the graph stage — clustering, expand/collapse (chapter → scene → event zoom), node badges for pending proposals; a <b>React Flow</b> strip for the pipeline itself. Both views share selection state: click a block in the strip, the graph flies to what it produced.</li>
   <li><b>Event feed is the contract:</b> the CLI emits a typed event stream (block started · sentence sectioned · patch verdict · proposal added · changeset pending · merged · graph rebuilt). The frontend is a pure consumer — first transport is the CLI writing an append-only <code>events.jsonl</code> per novel plus a tiny local SSE server (<code>novel watch</code>); the component never touches the DB directly.</li>
   <li><b>Four views, one state:</b> <i>Live Theater</i> (this demo), <i>Ontology Explorer</i> (free 3D browse, search, focus), <i>Timeline Lanes</i> (canon + branches as lanes, scrub/play through event order — DIY over chronologicalOrder), <i>Gate Queue</i> (ChangeSets as cards with diff-style review, approve/hold from the UI).</li>
+  <li><b>Timeline zoom is semantic, two levels (demo 2):</b> level 1 shows <i>big events</i> — summarized beats spanning chapter ranges; clicking one expands it into its <i>internal timeline</i> (level 2): the scenes, dialogue turns and micro-events it contains, in a scene cloud around an inner time axis with directed flow. Data-wise this is containment: a big event groups scenes/events; zoom = Reagraph expand/collapse over those relations, not a camera trick alone.</li>
   <li><b>Ghosts before facts:</b> proposals render as translucent amber ghosts in the graph <i>before</i> approval and solidify on merge — the user literally sees the difference between what the miniloop believes and what is canon.</li>
   <li><b>Replay for debugging:</b> the event stream is recorded, so any ingestion run can be replayed step-by-step later (the Agent Flow pattern) — a bug report becomes a rewatchable session.</li>
   <li><b>Host-agnostic:</b> no filesystem or VS Code APIs inside the component. A later VS Code extension is a thin shell (webview + the same event feed); the standalone app remains the public face.</li>
@@ -238,6 +259,172 @@ branch forks off. That loop, running on real data, is the product's front door.<
       ripple.setAttribute('cx', pos['uiharu'].px); ripple.setAttribute('cy', pos['uiharu'].py);
       ripple.setAttribute('r', 8 + rt * 55); ripple.setAttribute('opacity', String(0.8 * (1 - rt)));
     } else ripple.setAttribute('opacity', '0');
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<script>
+(function () {
+  const svg = document.getElementById('zoomSvg');
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(x, y, str, size, fill, parent, anchor) {
+    const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor || 'middle',
+      'paint-order': 'stroke', stroke: '#0a0e16', 'stroke-width': 3 }, parent);
+    t.textContent = str;
+    return t;
+  }
+  const defs = el('defs', {}, svg);
+  const mk = el('marker', { id: 'arr', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#5f6d88' }, mk);
+  const mkT = el('marker', { id: 'arrT', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#2dd4bf' }, mkT);
+
+  /* ---------------- MACRO: chapter range, big events ---------------- */
+  const macro = el('g', {}, svg);
+  const chapters = [
+    [20, 300, '第一章 · 咖啡店的相遇'], [320, 620, '第二章 · 丢失的终端'], [640, 900, '第三章 · 傍晚的约定'],
+  ];
+  for (const [x1, x2, label] of chapters) {
+    el('rect', { x: x1, y: 58, width: x2 - x1, height: 216, rx: 14, fill: 'rgba(38,48,74,.25)', stroke: '#26304a' }, macro);
+    txt((x1 + x2) / 2, 84, label, 13, '#9aa7bd', macro);
+  }
+  el('line', { x1: 26, y1: 196, x2: 886, y2: 196, stroke: '#3b4a6b', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, macro);
+  txt(880, 292, 'time →', 12, '#5f6d88', macro, 'end');
+  const BIG = [
+    ['b1', 105, '相遇', '美琴与黑子在咖啡店相遇'], ['b2', 228, '约定', '约下次见面'],
+    ['b3', 392, '终端丢失', '初春丢失巡查终端'], ['b4', 522, '归还终端', '在咖啡店寻回终端 ★'],
+    ['b5', 726, '傍晚集合', '三人傍晚集合'], ['b6', 838, '出发', '新的巡查开始'],
+  ];
+  const bigPos = {};
+  BIG.forEach(([id, x, name, sum], i) => {
+    bigPos[id] = { x, y: 196 };
+    if (i > 0) {
+      const px = BIG[i - 1][1];
+      const l = el('line', { x1: px + 34, y1: 196, x2: x - 38, y2: 196, stroke: '#2dd4bf', 'stroke-width': 2,
+        'stroke-dasharray': '6 5', 'marker-end': 'url(#arrT)', opacity: .8 }, macro);
+      l.classList.add('flowline');
+    }
+    const g = el('g', {}, macro);
+    const r = id === 'b4' ? 37 : 30;
+    const c = el('circle', { cx: x, cy: 196, r, fill: '#12333a', stroke: '#2dd4bf', 'stroke-width': id === 'b4' ? 3 : 2 }, g);
+    if (id === 'b4') { c.setAttribute('class', 'targetPulse'); }
+    txt(x, 192, name.slice(0, 2), 15, '#e8ecf4', g);
+    txt(x, 210, name.slice(2), 15, '#e8ecf4', g);
+    txt(x, 196 + r + 18, sum, 11.5, '#9aa7bd', g);
+    if (id === 'b4') txt(x, 196 - r - 12, 'click ⤢', 12, '#fbbf24', g);
+  });
+
+  /* ---------------- MICRO: inside the big event ---------------- */
+  const micro = el('g', { opacity: 0 }, svg);
+  // scene cloud
+  const cloud = el('g', {}, micro);
+  [[300, 168, 205, 88], [430, 150, 190, 96], [545, 172, 180, 82], [410, 196, 230, 76]].forEach(([cx, cy, rx, ry]) => {
+    el('ellipse', { cx, cy, rx, ry, fill: 'rgba(167,139,250,.08)', stroke: 'rgba(167,139,250,.35)', 'stroke-dasharray': '5 4' }, cloud);
+  });
+  txt(415, 82, 'scene cloud · 场景簇 — 咖啡店', 13, '#a78bfa', cloud);
+  // inner time axis
+  el('line', { x1: 80, y1: 252, x2: 846, y2: 252, stroke: '#3b4a6b', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, micro);
+  txt(846, 276, 'internal time →', 12, '#5f6d88', micro, 'end');
+  [210, 400, 590].forEach(x => txt(x, 246, '»', 17, '#2dd4bf', micro));
+  // characters
+  const CH = { uiharu: [168, 118, '初春饰利'], mikoto: [462, 104, '御坂美琴'], kuroko: [742, 118, '白井黒子'] };
+  for (const k in CH) {
+    const [x, y, name] = CH[k];
+    el('circle', { cx: x, cy: y, r: 21, fill: '#2a2145', stroke: '#a78bfa', 'stroke-width': 2 }, micro);
+    txt(x, y + 5, name[0], 15, '#e8ecf4', micro);
+    txt(x, y - 30, name, 12.5, '#c7d0e0', micro);
+  }
+  // dialogue turns (curved edges + quotes)
+  const TURNS = [
+    ['uiharu', 'mikoto', '1', '「终端好像落在店里了…」', 300, 66],
+    ['mikoto', 'uiharu', '2', '「店员捡到一台，是这个？」', 268, 158],
+    ['uiharu', 'mikoto', '3', '「就是它！」', 330, 88],
+    ['kuroko', 'uiharu', '4', '「记得请我们吃芭菲。」', 470, 60],
+  ];
+  const turnEls = TURNS.map(([a, b, n, quote, qx, qy]) => {
+    const [x1, y1] = CH[a], [x2, y2] = CH[b];
+    const mx = (x1 + x2) / 2, my = Math.min(y1, y2) - 34;
+    const p = el('path', { d: `M${x1},${y1} Q${mx},${my} ${x2},${y2}`, fill: 'none', stroke: '#5f6d88',
+      'stroke-width': 1.6, 'marker-end': 'url(#arr)', opacity: .55 }, micro);
+    const badge = el('g', { opacity: .55 }, micro);
+    el('circle', { cx: mx, cy: my + 16, r: 9, fill: '#171e2e', stroke: '#5f6d88' }, badge);
+    txt(mx, my + 20, n, 10.5, '#e8ecf4', badge);
+    const q = txt(qx, qy, quote, 12, '#fbbf24', micro);
+    q.setAttribute('opacity', 0);
+    return { p, badge, q };
+  });
+  // micro timeline nodes
+  const MICRO = [
+    [150, '场景', '柜台前', '#94a3b8'], [330, '事件', '发现终端', '#2dd4bf'], [485, '事件', '确认归属', '#2dd4bf'],
+    [625, '事件', '黑子调侃', '#2dd4bf'], [772, '事件', '芭菲之约', '#2dd4bf'],
+  ];
+  MICRO.forEach(([x, kind, name, col], i) => {
+    if (i > 0) {
+      const l = el('line', { x1: MICRO[i - 1][0] + 27, y1: 252, x2: x - 31, y2: 252, stroke: '#2dd4bf',
+        'stroke-width': 2, 'stroke-dasharray': '6 5', 'marker-end': 'url(#arrT)', opacity: .85 }, micro);
+      l.classList.add('flowline');
+    }
+    el('circle', { cx: x, cy: 252, r: 15, fill: '#0f2a30', stroke: col, 'stroke-width': 2 }, micro);
+    txt(x, 257, kind[0], 11, '#e8ecf4', micro);
+    txt(x, 292, name, 12, '#c7d0e0', micro);
+    txt(x, 224, kind + ' · ' + name, 10.5, '#5f6d88', micro);
+  });
+  // containment links chars -> micro nodes (faint)
+  [[168, 150], [462, 330], [462, 485], [742, 625]].forEach(([x, tx]) => {
+    el('line', { x1: x, y1: 140, x2: tx, y2: 240, stroke: '#a78bfa', 'stroke-width': 1, 'stroke-dasharray': '2 4', opacity: .3 }, micro);
+  });
+
+  const cap = document.getElementById('zoomCap');
+  const crumb = document.getElementById('zoomCrumb');
+  const style = document.createElement('style');
+  style.textContent = '@keyframes tpulse { 0%,100% { stroke-width:3 } 50% { stroke-width:6 } } .targetPulse { animation: tpulse 1.2s infinite } .flowline { animation: dashmove 1.2s linear infinite } @keyframes dashmove { to { stroke-dashoffset: -11 } }';
+  document.head.appendChild(style);
+
+  const CAPS = [
+    [0, 'Level 1 — the chapter range: one node per BIG event (an event summary spanning part of a chapter), time flowing left → right.'],
+    [3600, 'Clicking 归还终端 — semantic zoom: the summary node becomes its contents…'],
+    [5200, 'Level 2 — inside the big event: its internal timeline — scenes, micro-events, and the character dialogue, every arrow pointing the way time flows.'],
+    [9400, 'Zoom back out and the internal timeline collapses into its summary again — one node, holding everything.'],
+  ];
+  const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  let start = performance.now();
+  function frame(now) {
+    const t = (now - start) % 12000;
+    // zoom factor: 0 = macro, 1 = micro
+    let z;
+    if (t < 3400) z = 0;
+    else if (t < 5000) z = ease((t - 3400) / 1600);
+    else if (t < 9200) z = 1;
+    else if (t < 10800) z = 1 - ease((t - 9200) / 1600);
+    else z = 0;
+    const s = 1 + 2.1 * z;
+    macro.setAttribute('transform', `translate(460 170) scale(${s}) translate(${-bigPos.b4.x} ${-bigPos.b4.y})`);
+    macro.setAttribute('opacity', String(1 - Math.max(0, (z - 0.55) / 0.45)));
+    micro.setAttribute('opacity', String(Math.max(0, (z - 0.5) / 0.5)));
+    micro.setAttribute('transform', `translate(460 170) scale(${0.92 + 0.08 * z}) translate(-460 -170)`);
+    crumb.textContent = z > 0.5
+      ? 'timeline · 第二章 › 大事件「归还终端」› internal timeline'
+      : 'timeline · 章范围总览 — big events';
+    // dialogue turn highlighting
+    const active = z > 0.9 ? Math.floor((t - 5200) / 1000) % 4 : -1;
+    turnEls.forEach((te, i) => {
+      const on = i === active;
+      te.p.setAttribute('stroke', on ? '#fbbf24' : '#5f6d88');
+      te.p.setAttribute('stroke-width', on ? 2.8 : 1.6);
+      te.p.setAttribute('opacity', on ? 1 : 0.55);
+      te.q.setAttribute('opacity', on ? 1 : 0);
+      te.badge.setAttribute('opacity', on ? 1 : 0.55);
+    });
+    let capText = CAPS[0][1];
+    for (const [ct, txt2] of CAPS) if (t >= ct) capText = txt2;
+    if (cap.textContent !== capText) cap.textContent = capText;
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
