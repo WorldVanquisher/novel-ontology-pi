@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03 Dialogue detector — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">03</div>
+<div class="kicker">sector 03 · phase A — structure · decision patch</div>
+<h1>Dialogue detector — which sentences are spoken</h1>
+<p>
+  <span class="badge v1">status: v1 patch (skeleton)</span>
+  <span class="badge">repo: <code>src/autostep/patches/dialogue-detector.ts</code></span>
+  <span class="badge">model: Jev · <span class="prim choice">choice</span> + <span class="prim noul">noul</span></span>
+</p>
+<p class="sub">The sector the whole design was first sketched around: the dialogue detector receives
+sentence IDs from the auto segregation (sector 01) and chooses <b>which ones are dialogue</b> —
+then stitches multi-sentence turns, answering "which sentences belong to this dialogue".</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Sentence IDs + text for one scene span; the previous turn (for stitching)</td></tr>
+  <tr><th>Outputs</th><td>Dialogue units — ordered groups of sentence IDs — into shared context</td></tr>
+  <tr><th>Depends on</th><td>01 Sectioning, 02 Scene spans</td></tr>
+  <tr><th>Feeds into</th><td>06 Speaker attribution (units are what get attributed), 08 Extraction</td></tr>
+</table>
+
+<h2>Demo — classify, then stitch</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="items" id="items"></div>
+    <div style="font-size:12.5px;color:var(--dim)">
+      <span class="chip" style="border-color:var(--indigo)">dialogue ×<span id="cDlg">0</span></span>
+      <span class="chip">narration ×<span id="cNar">0</span></span>
+      <span class="chip" style="border-color:var(--violet)">interior monologue ×<span id="cTho">0</span></span>
+    </div>
+    <div class="items" id="turns"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Decision questions</h2>
+<div class="qcard"><b>segment_kind</b> · <span class="prim choice">choice</span> — Classify this sentence: dialogue (spoken aloud) / narration / interior_monologue (unspoken thought) / description (setting &amp; sensory detail).</div>
+<div class="qcard"><b>continues_previous_dialogue</b> · <span class="prim noul">noul</span> — Does this sentence continue the same spoken turn as the preceding dialogue sentence (same speaker, no narration break)? This is the stitch.</div>
+<div class="qcard"><b>is_interrupted_turn</b> · <span class="prim noul">noul</span> <span class="badge cand">candidate</span> — Was this turn cut off mid-speech? Prevents stitching two different speakers across an interruption.</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Quotes are a hint, not the rule:</b> 「」 makes dialogue likely, but narration quotes terms and thoughts too — that's why this is a decision patch, not a regex.</li>
+  <li><b>Speech tags are narration:</b> 她说道。 classifies as narration — but it carries the speaker hint that sector 06 leans on, so the classification keeps it adjacent to its turn.</li>
+  <li><b>Units, not sentences, flow downstream:</b> speaker attribution and extraction never see loose dialogue sentences, only stitched units.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/autostep/patches/dialogue-detector.ts</code> — two questions per sentence; groups by kind + continues flag into <code>ctx.accepted.dialogueUnits</code>.</li>
+  <li>Covered by the mocked-Jev miniloop test: a dialogue sentence is grouped into a unit with zero live model calls.</li>
+</ul>
+
+<h2>Open questions — dialogue detection</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Unquoted dialogue.<span>Some Chinese web novels run dialogue with —— or no marks at all. Does segment_kind hold up, or does this sector need a language/style pre-pass?</span></li>
+    <li>Speech-tag attachment.<span>Should 她说道。 be formally attached to its turn as metadata (it names the speaker), or left as plain narration that sector 06 merely reads?</span></li>
+    <li>Thought conventions.<span>Interior monologue appears as 『』, italics, or bare text depending on the source. Per-novel style profiles — worth having?</span></li>
+    <li>Nested quotation.<span>A character quoting another character: one unit with a nested speaker, or two units?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const S=[["s0000","御坂美琴推开咖啡店的门，环顾四周。","narr"],["s0001","「姐姐大人，您迟到了十分钟。」","dlg"],["s0002","白井黑子坐在窗边，晃了晃手中的杯子。","narr"],["s0003","「初春说她马上就到。」","dlg"],["s0004","话音未落，初春饰利推门进来。","narr"],["s0005","「抱歉，我来晚了！」","dlg"],["s0006","（她果然还是老样子。）美琴想起黑子早上提到的巡逻。","thought"]];
+const box=document.getElementById('items');
+box.innerHTML=S.map(([id,t,k],i)=>`<div class="item" id="it${i}"><small>${id} · <span id="kind${i}">?</span></small>${t}</div>`).join('');
+const KIND={dlg:['dialogue','var(--indigo)'],narr:['narration','var(--dim)'],thought:['interior_monologue','var(--violet)']};
+function resetAll(){S.forEach((_,i)=>{const e=document.getElementById('it'+i);e.className='item';document.getElementById('kind'+i).textContent='?';});['cDlg','cNar','cTho'].forEach(id=>document.getElementById(id).textContent=0);document.getElementById('turns').innerHTML='';}
+const steps=[
+ {t:2600,cap:["segment_kind: classify every sentence","Each sentence gets one pick of four. Quotes help, but the thought in s0006 wears no quotes at all — kind is a judgment, so Jev makes it."],run(){let d=0,n=0,t=0;S.forEach(([id,txt,k],i)=>{const e=document.getElementById('it'+i);e.classList.add('on',k==='dlg'?'dlg':k);const kl=document.getElementById('kind'+i);kl.textContent=KIND[k][0];kl.style.color=KIND[k][1];if(k==='dlg')d++;else if(k==='thought')t++;else n++;});document.getElementById('cDlg').textContent=d;document.getElementById('cNar').textContent=n;document.getElementById('cTho').textContent=t;}},
+ {t:2600,cap:["continues_previous_dialogue: the stitch","Each dialogue sentence is asked whether it continues the previous turn. Here every line stands alone — three units of one sentence each. A run of continues = 1 would have merged them into a single turn."],run(){document.getElementById('turns').innerHTML='<span class="chip" style="border-color:var(--indigo)">Turn 1 · [s0001]</span> <span class="chip" style="border-color:var(--indigo)">Turn 2 · [s0003]</span> <span class="chip" style="border-color:var(--indigo)">Turn 3 · [s0005]</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

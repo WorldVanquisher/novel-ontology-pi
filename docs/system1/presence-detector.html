@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05 Presence detector — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">05</div>
+<div class="kicker">sector 05 · phase A — structure · decision patch</div>
+<h1>Presence detector — who is actually in the scene</h1>
+<p>
+  <span class="badge v1">status: v1 patch (skeleton)</span>
+  <span class="badge">repo: <code>src/autostep/patches/presence-detector.ts</code></span>
+  <span class="badge">model: Jev · <span class="prim noul">noul</span> × candidates</span>
+</p>
+<p class="sub">The distinction this sector protects is small and crucial: a character can be
+<b>mentioned</b> in a scene — talked about, remembered, phoned — without being <b>present</b>.
+Only presence feeds simulation state. Confuse the two, and characters start knowing things
+they never witnessed.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>One scene span + candidate characters (from 04's scans + previous-scene carryover)</td></tr>
+  <tr><th>Outputs</th><td><code>charactersPresent</code> / <code>charactersMentioned</code> per scene → PRESENT_IN / MENTIONED_IN proposals</td></tr>
+  <tr><th>Depends on</th><td>02 Scene spans, 04 Name detector</td></tr>
+  <tr><th>Feeds into</th><td>06 Speaker attribution (its candidate list), 08 Extraction, 12 Simulation (state correctness)</td></tr>
+</table>
+
+<h2>Demo — one noul per candidate</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div style="font-size:13px;color:var(--dim)">Scene A · the café — candidates from the name scan:</div>
+    <div id="cands"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+      <div class="outcol"><h4>Present</h4><div id="colP"></div></div>
+      <div class="outcol"><h4>Mentioned only</h4><div id="colM"></div></div>
+    </div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Decision questions</h2>
+<div class="qcard"><b>is_present_&lt;candidate&gt;</b> · <span class="prim noul">noul</span> — Is this character physically present and able to act/speak in this scene (not merely mentioned, remembered, or spoken about)? Asked once per candidate — because <span class="prim choice">choice</span> returns a single pick, a cast of five can never be one question.</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Candidates are cheap, questions are spent wisely:</b> the deterministic name scan (04) plus previous-scene carryover builds the candidate list; Jev only judges those names.</li>
+  <li><b>Mentioned is recorded, not discarded:</b> a MENTIONED_IN edge is real knowledge — it tells simulation who is being talked about, and it often foreshadows an entrance.</li>
+  <li><b>Highest gates in the registry:</b> presence feeds character state directly, so this patch accepts at 0.85 and escalates eagerly.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/autostep/patches/presence-detector.ts</code> — one <code>noul</code> per candidate in <code>ctx.accepted.presenceCandidates</code>; splits answers into <code>charactersPresent</code> / <code>charactersMentioned</code>.</li>
+</ul>
+
+<h2>Open questions — presence</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Off-screen presence.<span>On the phone, behind the door, watching through a camera — present, mentioned, or a third state (present_remote)? Simulation cares: they can hear, but can't act.</span></li>
+    <li>Entrances and exits mid-scene.<span>Uiharu enters at s0004. Is presence per-scene, or per-sentence-range inside the scene? Scene B exists in the demo because sector 02 split there — when it doesn't split, presence needs ranges.</span></li>
+    <li>Groups and crowds.<span>"The class", "the patrol" — collective presence as one pseudo-entity, or expanded to members?</span></li>
+    <li>Non-person presences.<span>Corpses, portraits, recordings, an AI on a screen — do they get PRESENT_IN with a qualifier?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const CANDS=[["御坂美琴 Mikoto",.97,true],["白井黑子 Kuroko",.95,true],["初春饰利 Uiharu",.12,false],["风纪委员巡逻 the patrol",.03,false]];
+const box=document.getElementById('cands');
+box.innerHTML=CANDS.map(([n],i)=>`<div style="margin:8px 0"><span style="font-size:13.5px">${n}</span><div class="meter"><i id="m${i}"></i></div><small style="color:var(--faint)" id="mv${i}">is_present → ?</small></div>`).join('');
+function resetAll(){CANDS.forEach((_,i)=>{document.getElementById('m'+i).style.width=0;document.getElementById('mv'+i).textContent='is_present → ?';});document.getElementById('colP').innerHTML='';document.getElementById('colM').innerHTML='';}
+const steps=[
+ {t:2800,cap:["One noul per candidate","Four candidates, four yes/no questions in one batched call. Mikoto and Kuroko are plainly in the room."],run(){CANDS.forEach(([n,p],i)=>{document.getElementById('m'+i).style.width=(p*100)+'%';document.getElementById('mv'+i).textContent='is_present → '+p.toFixed(2);});}},
+ {t:2600,cap:["The split: present vs. mentioned","Uiharu scores 0.12 for THIS scene — she was only talked about ('she'll be here any moment'). She lands in Mentioned, with a MENTIONED_IN edge — and walks in one scene later, where she'll score ~1.0."],run(){document.getElementById('colP').innerHTML='<span class="chip">御坂美琴</span> <span class="chip">白井黑子</span>';document.getElementById('colM').innerHTML='<span class="chip">初春饰利 (talked about)</span> <span class="chip">风纪委员巡逻 (a topic, not a cast member)</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

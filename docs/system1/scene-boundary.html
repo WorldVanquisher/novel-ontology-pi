@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>02 Scene boundary — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">02</div>
+<div class="kicker">sector 02 · phase A — structure · decision patch</div>
+<h1>Scene boundary — where scenes start</h1>
+<p>
+  <span class="badge v1">status: v1 patch (skeleton)</span>
+  <span class="badge">repo: <code>src/autostep/patches/scene-boundary.ts</code></span>
+  <span class="badge">model: Jev · <span class="prim noul">noul</span></span>
+</p>
+<p class="sub">Scenes are the unit everything else keys off: presence is per-scene, dialogue groups
+inside scenes, and extraction reads one scene at a time. This patch decides, sentence by sentence,
+whether a new scene begins — and records <i>why</i>.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Sentences of one window (IDs + text) + compact state: current scene-so-far</td></tr>
+  <tr><th>Outputs</th><td>Scene spans — ordered sentence-ID ranges, into shared context for patches 03–06 and extraction</td></tr>
+  <tr><th>Depends on</th><td>01 Sectioning</td></tr>
+  <tr><th>Feeds into</th><td>03 Dialogue, 05 Presence, 08 Extraction (per-scene unit)</td></tr>
+</table>
+
+<h2>Demo — scanning for the seam</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="items" id="items"></div>
+    <div class="items" id="spans"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Decision questions</h2>
+<div class="qcard"><b>is_scene_boundary</b> · <span class="prim noul">noul</span> — Does a new scene begin at this sentence (change of place, a time skip, or a viewpoint shift from what came immediately before)? Asked per sentence; ≥ 0.5 opens a new span.</div>
+<div class="qcard"><b>boundary_reason</b> · <span class="prim choice">choice</span> <span class="badge cand">candidate</span> — location_changed / time_skipped / pov_changed / cast_changed. Knowing <i>why</i> a boundary fired helps presence decide carryover.</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>First patch in the registry</b> — its spans frame every later patch's work in the window.</li>
+  <li><b>A boundary is a probability, not a cut:</b> near-0.5 answers are exactly what the engine's re-ask gate (sector 07) exists for — expand context and decide again.</li>
+  <li><b>Spans, not copies:</b> a scene is a list of sentence IDs; the text stays in the block, referenced.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/autostep/patches/scene-boundary.ts</code> — builds one <code>noul</code> per window sentence; applies spans into <code>ctx.accepted.sceneSpans</code>.</li>
+  <li>Gates: accept ≥ 0.85 · re-ask 0.55–0.85 · escalate &lt; 0.55 (tuning: see Open questions).</li>
+</ul>
+
+<h2>Open questions — scene boundaries</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Granularity.<span>Is a flashback inside a conversation a new scene, or a marked sub-span? Same question for dreams and回忆 interludes.</span></li>
+    <li>Soft boundaries.<span>Same room, same cast, but an hour passes — one scene or two? The answer changes how presence carryover works (sector 05).</span></li>
+    <li>Reason taxonomy.<span>Is {location, time, POV, cast} the right reason set — and does extraction actually consume the reason, or is it decoration?</span></li>
+    <li>Length caps.<span>Extraction reads per scene; is there a max scene size beyond which a "soft split" is forced for context limits?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const S=[["s0000","御坂美琴推开咖啡店的门，环顾四周。"],["s0001","「姐姐大人，您迟到了十分钟。」"],["s0002","白井黑子坐在窗边，晃了晃手中的杯子。"],["s0003","「初春说她马上就到。」"],["s0004","话音未落，初春饰利推门进来。"],["s0005","「抱歉，我来晚了！」"],["s0006","美琴想起黑子早上提到的风纪委员巡逻。"]];
+const box=document.getElementById('items');
+box.innerHTML=S.map(([id,t],i)=>`<div class="item" id="it${i}"><small>${id}</small>${t}<span class="tag" id="flag${i}" style="background:#241a10;color:var(--amber);border:1px solid var(--amber)">⚑ new scene · cast change · 0.91</span></div>`).join('');
+function resetAll(){S.forEach((_,i)=>{const e=document.getElementById('it'+i);e.classList.remove('on','boundary');document.getElementById('flag'+i).classList.remove('show');});document.getElementById('spans').innerHTML='';}
+const steps=[
+ {t:2200,cap:["Scan: one noul per sentence","is_scene_boundary is asked for each sentence against the scene-so-far. Most answers come back near 0 — the scene continues."],run(){S.forEach((_,i)=>document.getElementById('it'+i).classList.add('on'));}},
+ {t:2400,cap:["One seam fires: s0004, p = 0.91","A new character pushes the door open — the cast changes and the scene's center of gravity shifts. The flag lands; the reason (cast change) is recorded with it."],run(){const e=document.getElementById('it4');e.classList.add('boundary');document.getElementById('flag4').classList.add('show');}},
+ {t:2200,cap:["Output: scene spans","The window leaves as two spans. Presence, dialogue grouping and extraction all work inside these borders."],run(){document.getElementById('spans').innerHTML='<span class="chip">Scene A · s0000–s0003</span> <span class="chip">Scene B · s0004–s0006</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

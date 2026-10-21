@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>04 Name detector — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">04</div>
+<div class="kicker">sector 04 · phase A — structure · decision patch</div>
+<h1>Name detector — known, new, and nicknamed</h1>
+<p>
+  <span class="badge v1">status: v1 patch (skeleton)</span>
+  <span class="badge">repo: <code>src/autostep/patches/name-detector.ts</code></span>
+  <span class="badge">model: code scan + Jev · <span class="prim noul">noul</span> / <span class="prim choice">choice</span></span>
+</p>
+<p class="sub">The sector that grows the cast. Its two halves are split by rule zero:
+<b>code</b> scans the sentences for names and aliases already in the graph — exact, free, certain.
+Then the <b>decision model</b> judges the leftovers: is this candidate a <b>new name</b>, or a
+<b>new nickname</b> for someone we already know?</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Sentences + the graph's alias table (all known name forms) + candidate spans</td></tr>
+  <tr><th>Outputs</th><td>Code-scan hits (certain) · proposals: <code>upsert_entity</code> (new character) / <code>add_alias</code> (new nickname) → ChangeSet</td></tr>
+  <tr><th>Depends on</th><td>01 Sectioning, 10 Storage (alias table read)</td></tr>
+  <tr><th>Feeds into</th><td>05 Presence (candidate cast), 09 Merge gate (its proposals)</td></tr>
+</table>
+
+<h2>Demo — scan first, decide second</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="items" id="items"></div>
+    <div id="verdicts"></div>
+    <div class="items" id="props"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Decision questions</h2>
+<div class="qcard"><b>is_new_name</b> · <span class="prim noul">noul</span> — Is this candidate a character's name (a person being referred to) that does NOT belong to any already-known character? Places, items and generic nouns ("the teacher") are not character names.</div>
+<div class="qcard"><b>is_nickname_for</b> · <span class="prim choice">choice</span> — If this candidate is a nickname, epithet or title for an already-known character, which one? Options: every known character ID + "none".</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Never ask the model what code knows:</b> a string that matches the alias table is a hit, full stop. Jev's context window is spent only on the unknown.</li>
+  <li><b>Proposals, not writes:</b> a "new character" leaves this sector as an <code>upsert_entity</code> proposal in the block's ChangeSet. The work LLM fleshes the character out during extraction (08); the merge gate (09) decides if they enter the graph.</li>
+  <li><b>The alias table is the memory:</b> every merged nickname makes future scans cheaper and presence/speaker decisions easier. Names are data on the entity — canonical, alias, nickname, title — in any language.</li>
+  <li><b>Discovery escalates:</b> a probable new name is important enough to skip the re-ask gate and go straight to careful handling.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>scanKnownNames(ctx)</code> — deterministic scan over <code>ctx.knownEntities</code> name forms; covered by the miniloop test (finds 御坂美琴 with no model call).</li>
+  <li><code>nameDetector</code> patch — builds the two question types per candidate from <code>ctx.accepted.nameCandidates</code>; interprets answers into proposals / escalations.</li>
+</ul>
+
+<h2>Open questions — name detection</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Candidate generation — the big one.<span>Where do candidate spans come from? Speech-verb patterns (X说道), quote-adjacent sequences, capitalization/CJK heuristics, work-LLM nomination — or a layered mix? This choice drives the sector's recall.</span></li>
+    <li>Name collisions.<span>Two different people sharing a name (common in long novels, and across generations) — how does the sector know a "known" hit is actually the other person?</span></li>
+    <li>Cross-language forms.<span>The same character as 美琴 / Misaka / ミサカ — one entity, three surface forms. Who proposes the merge: this sector, extraction, or the main agent at the gate?</span></li>
+    <li>Titles vs. aliases.<span>Is 姐姐大人 an alias of Mikoto, or an ADDRESSES relation from Kuroko? The schema supports both — the sector needs a rule.</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const box=document.getElementById('items');
+box.innerHTML=`
+ <div class="item on" id="n1"><small>s0000</small><span class="nm" data-w="御坂美琴">御坂美琴</span>推开咖啡店的门，环顾四周。</div>
+ <div class="item on" id="n2"><small>s0001</small>「<span class="nm" data-w="姐姐大人">姐姐大人</span>，您迟到了十分钟。」</div>
+ <div class="item on" id="n3"><small>s0004</small>话音未落，<span class="nm" data-w="初春饰利">初春饰利</span>推门进来。</div>`;
+function paint(sel, cls){document.querySelectorAll('.nm').forEach(el=>{if(sel.includes(el.dataset.w)){el.outerHTML=`<mark class="${cls}">${el.dataset.w}</mark>`;}});}
+function resetAll(){
+  document.querySelectorAll('mark').forEach(m=>{const s=document.createElement('span');s.className='nm';s.dataset.w=m.textContent;s.textContent=m.textContent;m.replaceWith(s);});
+  document.getElementById('verdicts').innerHTML='';document.getElementById('props').innerHTML='';}
+const steps=[
+ {t:2400,cap:["Half 1 — the code scan (no model)","Every known name form is matched exactly against the sentences. 御坂美琴 hits instantly: certain, free, and no Jev call was spent."],run(){paint(['御坂美琴'],'known');}},
+ {t:2600,cap:["Half 2 — Jev judges the leftovers: a new name","初春饰利 matches nothing known. is_new_name → 0.93. A discovery: this sector emits an upsert_entity proposal for the ChangeSet."],run(){paint(['初春饰利'],'cand');document.getElementById('props').innerHTML='<span class="chip new">＋ proposal: new Character 初春饰利 (0.93)</span>';}},
+ {t:2600,cap:["…or a nickname for someone known","姐姐大人 is how Kuroko addresses Mikoto. is_nickname_for → char_000001 (0.88): an add_alias proposal, kind: title. Once merged, the code scan will catch it for free forever after."],run(){paint(['姐姐大人'],'cand');document.getElementById('props').innerHTML+=' <span class="chip new">＋ proposal: add_alias 姐姐大人 → 御坂美琴</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

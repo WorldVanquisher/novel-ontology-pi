@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>01 Sectioning — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">01</div>
+<div class="kicker">sector 01 · phase A — structure</div>
+<h1>Sectioning — intake &amp; auto sentence segregation</h1>
+<p>
+  <span class="badge v1">status: implemented</span>
+  <span class="badge">repo: <code>src/text/sectioning.ts</code></span>
+  <span class="badge">model: none — deterministic code</span>
+</p>
+<p class="sub">The front door of the whole system. A novel arrives as one big text; this sector cuts it
+into <b>blocks</b> (a chapter, or a long block) and segregates each block into <b>sentences</b> with
+stable IDs and character offsets. Every later decision, scene, event and proposal cites these IDs —
+sectioning is the provenance anchor for the entire ontology.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Raw novel file (EPUB / TXT), in any language</td></tr>
+  <tr><th>Outputs</th><td>Blocks → sentences: <code>{ id, index, paragraphIndex, text, startOffset, endOffset }</code></td></tr>
+  <tr><th>Depends on</th><td>Nothing — first sector in the pipeline</td></tr>
+  <tr><th>Feeds into</th><td>Every patch (02–06), the miniloop engine (07), extraction (08)</td></tr>
+</table>
+
+<h2>Demo — a block segregates itself</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div id="rawblock" style="font-size:14px;color:var(--dim);opacity:.3;transition:opacity .5s">
+      御坂美琴推开咖啡店的门，环顾四周。「姐姐大人，您迟到了十分钟。」白井黑子坐在窗边，晃了晃手中的杯子。「初春说她马上就到。」话音未落，初春饰利推门进来。「抱歉，我来晚了！」美琴想起黑子早上提到的风纪委员巡逻。</div>
+    <div class="items" id="sentitems"></div>
+    <div id="sumrow" style="margin-top:8px"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Rule zero lives here:</b> never ask a model what code can compute exactly. Splitting text is exactly computable, so no model — Jev or LLM — is ever consulted in this sector.</li>
+  <li><b>Language-aware rules:</b> CJK terminal punctuation (。！？) and quote nesting (「」『』) close sentences; ellipses (……) don't split mid-thought; English abbreviations (Dr., e.g.) and decimals (3.5) don't split either.</li>
+  <li><b>Stable IDs:</b> <code>b0007_s0003</code> = block 7, sentence 3. IDs never change after assignment, so a ChangeSet proposal can cite a sentence forever.</li>
+  <li><b>Offsets are evidence:</b> every sentence knows its exact character range in the source block, so any ontology node can be traced back to the literal text that produced it.</li>
+  <li><b>Blocks are the processing unit:</b> ingestion rolls block by block (see sector 09); a block is one chapter when chapters exist, otherwise a long slice of text.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/text/sectioning.ts</code> — <code>sectionBlock(text, blockIndex)</code>; paragraph split first, then terminator scan with a closer-absorption run (。』 ?! etc.).</li>
+  <li>Exposed as <code>novel section &lt;file&gt;</code> — works today, prints JSON.</li>
+  <li>Tests: <code>test/sectioning.test.ts</code> — CJK quotes, English abbreviations/decimals, paragraph tracking. All passing.</li>
+</ul>
+
+<h2>Open questions — sectioning</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Block cutting.<span>How are chapters detected across EPUB structures and raw TXT conventions (第X章 headings, TOC entries, volume splits)? When a book has no chapters, how long is a "long block", and should blocks overlap by a few sentences for context?</span></li>
+    <li>More languages' rules.<span>European quotes («» „ "), Korean spacing, Japanese vertical-text artifacts — which languages get hand-tuned rules in v1, and which fall back to a generic splitter?</span></li>
+    <li>Non-narrative matter.<span>Author notes, afterwords, illustrations' captions, tables — sectioned like prose, flagged, or skipped?</span></li>
+    <li>Damaged text.<span>OCR errors and missing punctuation in fan-translated files — how much fuzz should the splitter tolerate before a block is flagged for the merge gate?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const SENTS=["御坂美琴推开咖啡店的门，环顾四周。","「姐姐大人，您迟到了十分钟。」","白井黑子坐在窗边，晃了晃手中的杯子。","「初春说她马上就到。」","话音未落，初春饰利推门进来。","「抱歉，我来晚了！」","美琴想起黑子早上提到的风纪委员巡逻。"];
+const box=document.getElementById('sentitems');
+box.innerHTML=SENTS.map((t,i)=>`<div class="item" id="si${i}"><small>b0007_s000${i} · offset ${i*14}–${i*14+13}</small>${t}</div>`).join('');
+const steps=[
+ {t:2000,cap:["A block arrives as raw text","One chapter, unpunctuated by structure — a single string. Nothing downstream can cite anything yet."],run(){document.getElementById('rawblock').style.opacity=1;}},
+ {t:2600,cap:["Segregation: terminators + quote closers","The splitter scans for terminal punctuation, absorbing closing quotes (。」) into the sentence they end. Seven sentences appear — each with its ID."],run(){SENTS.forEach((_,i)=>document.getElementById('si'+i).classList.add('on'));}},
+ {t:2400,cap:["IDs + offsets are stamped","Every sentence now carries a stable ID and its exact character range. This is the last time this sector runs — and the first thing every other sector reads."],run(){document.getElementById('sumrow').innerHTML='<span class="chip">7 sentences</span> <span class="chip">1 block</span> <span class="chip">0 model calls</span> <span class="chip">provenance: ready</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset(){document.getElementById('rawblock').style.opacity=.3;SENTS.forEach((_,i)=>document.getElementById('si'+i).classList.remove('on'));document.getElementById('sumrow').innerHTML='';}})));
+</script>
+</body>
+</html>

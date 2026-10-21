@@ -2,56 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live demo — System 1 Design · novel-ontology-pi</title>
-<link rel="stylesheet" href="assets/style.css">
+<meta http-equiv="refresh" content="0; url=index.html">
+<title>moved — The generic demo page was split up — every sector page now carries its own demo. Start at the overview.</title>
+<link rel="canonical" href="index.html">
 </head>
-<body>
-<div class="wrap">
-
-<nav class="site">
-  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
-  <a class="page" href="index.html">Overview</a>
-  <a class="page here" href="demo.html">Live demo</a>
-  <a class="page" href="patches.html">Decision patches</a>
-  <a class="page" href="gates.html">Confidence gates</a>
-  <a class="page" href="merge-gate.html">Blocks &amp; merge gate</a>
-  <a class="page" href="questions.html">Open questions</a>
-</nav>
-
-<div class="kicker">system 1 · the loop, animated</div>
-<h1>Watch it run — one block, seven sentences</h1>
-<p class="sub">A tiny block in the style of the legacy test corpus, with English glosses.
-Each step is one decision patch doing its one job; watch the ChangeSet counter —
-proposals accumulate, and the main graph is never touched.</p>
-
-<div class="panel demo-stage">
-  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
-  <div class="progressdots" id="dots"></div>
-  <div class="sentrow" id="sentrow"></div>
-  <div class="splitcols" id="splitcols">
-    <div class="splitcol"><h4>Present in scene</h4><div id="colPresent"></div></div>
-    <div class="splitcol"><h4>Mentioned only</h4><div id="colMentioned"></div></div>
-    <div class="splitcol"><h4>Proposals → ChangeSet</h4><div id="colProps"></div></div>
-  </div>
-  <div class="csbar" id="csbar">ChangeSet for block <span class="mono">b0007</span> —
-    <b id="cscount">0 proposals</b>, main graph untouched
-    <div class="fill" id="csfill"></div></div>
-  <p style="margin-top:14px"><button class="replay" id="replay">↻ Replay</button></p>
-</div>
-
-<p class="sub">What just happened, in order: <b>code</b> sectioned the text (step 1);
-<b>patches</b> decided structure with Jev (steps 2–6); everything concluded became
-<b>proposals</b> (step 7). The work LLM hasn't been called at all yet — it enters later,
-per scene, for event extraction, and only for units the gates escalate.</p>
-
-<div class="pager">
-  <a href="index.html">← Overview</a>
-  <a href="patches.html">Next: Decision patches →</a>
-</div>
-
-<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21</footer>
-</div>
-<script src="assets/demo.js"></script>
+<body style="background:#0b0e14;color:#e8ecf4;font:15px/1.6 -apple-system,'Segoe UI',Roboto,sans-serif;padding:40px">
+<p>The generic demo page was split up — every sector page now carries its own demo. Start at the overview. This page's content now lives in the sector structure:
+<a style="color:#2dd4bf" href="index.html">index.html</a>.</p>
 </body>
 </html>

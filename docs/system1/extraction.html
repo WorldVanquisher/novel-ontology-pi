@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>08 Extraction — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">08</div>
+<div class="kicker">sector 08 · phase B — knowledge</div>
+<h1>Extraction — from structured scenes to ontology</h1>
+<p>
+  <span class="badge open">status: designed, not yet implemented</span>
+  <span class="badge">repo: <code>src/connectors/llm.ts</code> (work model) · extraction step in the block processor</span>
+  <span class="badge">model: work LLM (user API #1)</span>
+</p>
+<p class="sub">Everything before this sector is structure: sentences, scenes, turns. This is where
+<b>meaning</b> enters. The work LLM reads <b>one structured scene at a time</b> — never a raw chapter —
+and proposes the ontology: events, participants, causal links, and character state changes,
+all in the English-canonical schema, each with its evidence sentences attached.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Structured scenes (spans, present cast, turns) + relevant graph context (who these characters are so far)</td></tr>
+  <tr><th>Outputs</th><td>Proposals appended to the block's ChangeSet: <code>create_event</code>, <code>add_relation</code> (CAUSES…), <code>set_state_change</code>, entity updates</td></tr>
+  <tr><th>Depends on</th><td>02–07 (structure), 10 Storage (context reads)</td></tr>
+  <tr><th>Feeds into</th><td>09 Merge gate (same ChangeSet as the patches' proposals)</td></tr>
+</table>
+
+<h2>Demo — one scene becomes events</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="card" style="margin:0 0 10px"><h3 style="font-size:13.5px">Scene B · s0004–s0006 · café</h3>
+      <p style="margin:2px 0">present: Mikoto, Kuroko, Uiharu · turns: Uiharu → everyone: 「抱歉，我来晚了！」</p></div>
+    <div id="events"></div>
+    <div class="items" id="props"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Per scene, not per chapter:</b> the old system extracted 3–5 events per raw chapter and lost the thread. A scene is small, cast-bounded, and already structured — extraction quality follows.</li>
+  <li><b>English semantics, original evidence:</b> every event gets an English <code>summaryEn</code> (cross-language search and reasoning) plus the original-language quote and sentence IDs (provenance).</li>
+  <li><b>State is proposed as deltas:</b> "Mikoto: embarrassment +0.3, knowledge += patrol schedule" — state changes are proposals like everything else; the canonical state is always a fold of merged events (sector 12).</li>
+  <li><b>Causality is explicit:</b> CAUSES edges are first-class proposals with confidence, not list properties on nodes — the legacy design's known weakness, fixed here.</li>
+  <li><b>Same gate:</b> extraction proposals join the patches' proposals in one ChangeSet per block. One review, one merge.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>WorkModel</code> interface in <code>src/connectors/llm.ts</code> — target: Pi's provider layer (<code>@earendil-works/pi-ai</code>), so any user-provided LLM API works.</li>
+  <li>Extraction runs inside <code>BlockProcessor</code> between the miniloop and the merge gate (marked TODO in the skeleton).</li>
+  <li>Output validated against the English schema v1 (<code>src/ontology/types.ts</code>) before a proposal is admitted to the ChangeSet.</li>
+</ul>
+
+<h2>Open questions — extraction</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Event granularity.<span>How many events per scene is right? Too few and causality thins; too many and the graph drowns in trivia. The event-worthiness candidate patch (Jev score) could pre-filter — or extraction decides alone.</span></li>
+    <li>State dimensions.<span>Which state does a character carry — emotions, knowledge, goals, relationships, location, possessions? The legacy design had all of these; the fold cost grows with each.</span></li>
+    <li>Causality: propose or originate?<span>Should the causal-candidate patch pre-propose CAUSES edges for extraction to confirm, or does extraction originate them? Split of labor between Jev and the LLM is undecided.</span></li>
+    <li>Summary fidelity.<span>summaryEn is a translation AND a summary. Spot-check workflow at the merge gate, or a confidence the LLM self-reports?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+function resetAll(){document.getElementById('events').innerHTML='';document.getElementById('props').innerHTML='';}
+const steps=[
+ {t:2800,cap:["The LLM reads structure, not raw text","The scene arrives pre-digested: cast, turns, spans. Its job is only meaning — what happened, who was involved, what changed."],run(){document.getElementById('events').innerHTML='<div class="verdict good on">Event evt_…41 · <b>arrival</b> — Uiharu enters the café, late, apologizing. <span style="color:var(--faint)">actors: Uiharu · evidence: s0004–s0005</span></div>';}},
+ {t:2800,cap:["Events, state deltas, causal candidates","A second event (the apology lands, the group is complete) and a state delta join it. Everything is a proposal with confidence and evidence attached."],run(){document.getElementById('events').innerHTML+='<div class="verdict good on">Event evt_…42 · <b>reunion</b> — the group is complete; conversation can begin. <span style="color:var(--faint)">CAUSES ← evt_…41</span></div><div class="verdict warn on">State Δ · Mikoto: relief +0.2 · Uiharu: embarrassment +0.4</div>';}},
+ {t:2200,cap:["Into the same ChangeSet","Extraction proposals append to the patches' proposals for this block — one review at the merge gate covers both."],run(){document.getElementById('props').innerHTML='<span class="chip">＋ create_event ×2</span> <span class="chip">＋ add_relation CAUSES ×1</span> <span class="chip">＋ set_state_change ×2</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

@@ -3,88 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blocks &amp; merge gate — System 1 Design · novel-ontology-pi</title>
+<title>09 Merge gate — novel-ontology-pi design</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="wrap">
+<nav class="site" id="sitenav"></nav>
 
-<nav class="site">
-  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
-  <a class="page" href="index.html">Overview</a>
-  <a class="page" href="demo.html">Live demo</a>
-  <a class="page" href="patches.html">Decision patches</a>
-  <a class="page" href="gates.html">Confidence gates</a>
-  <a class="page here" href="merge-gate.html">Blocks &amp; merge gate</a>
-  <a class="page" href="questions.html">Open questions</a>
-</nav>
+<div class="sectorno">09</div>
+<div class="kicker">sector 09 · phase B — knowledge</div>
+<h1>Merge gate — blocks roll, proposals wait, the main agent decides</h1>
+<p>
+  <span class="badge v1">status: implemented (skeleton)</span>
+  <span class="badge">repo: <code>src/merge/</code> · <code>src/processing/blockProcessor.ts</code></span>
+  <span class="badge">reviewer: the main agent (System 2)</span>
+</p>
+<p class="sub">The processing model of the whole system. Ingestion rolls <b>block by block</b> —
+chapter, or long block. For each block, sectors 01–08 produce proposals; this sector accumulates
+them into one <b>ChangeSet</b> and holds it at the gate. The <b>main agent</b> — with all its
+memories and capabilities — reviews: <b>approve</b> the merge, <b>hold</b> it, or ask to
+<b>revise part</b> of it. Then the next block rolls, until the novel is done.</p>
 
-<div class="kicker">processing model · the safety property</div>
-<h1>Rolling by block — and the merge gate</h1>
-<p class="sub">A novel is never ingested in one swallow. Processing rolls <b>chapter by chapter</b>
-(or by long block), and the System 1 miniloop is never allowed to write to the ontology main
-graph. It <i>proposes</i>. The main agent <i>decides</i>.</p>
+<table class="io">
+  <tr><th>Inputs</th><td>All proposals for one block (patches 02–06 + extraction 08), each with confidence + provenance</td></tr>
+  <tr><th>Outputs</th><td>Approved ChangeSets applied via OntologyStore (10) — or held / revised ChangeSets with review notes</td></tr>
+  <tr><th>Depends on</th><td>07 Miniloop engine, 08 Extraction</td></tr>
+  <tr><th>Feeds into</th><td>10 Storage (writes happen only here), then the next block</td></tr>
+</table>
 
-<h2>One block, five beats</h2>
-<div class="flow">
-  <div class="node"><b>1 · SECTION</b><span>code splits the block into sentences — stable IDs + offsets</span></div>
-  <div class="arrow">→</div>
-  <div class="node"><b>2 · MINIloop</b><span>decision patches run; every conclusion becomes a proposal</span></div>
-  <div class="arrow">→</div>
-  <div class="node"><b>3 · EXTRACT</b><span>work LLM reads the structured scenes; proposes events + causality</span></div>
-  <div class="arrow">→</div>
-  <div class="node"><b>4 · ACCUMULATE</b><span>all proposals collect into one ChangeSet — graph untouched</span></div>
-  <div class="arrow">→</div>
-  <div class="node" style="border-color:var(--teal)"><b>5 · MERGE GATE</b><span>the main agent reviews</span></div>
+<h2>Demo — three blocks, three verdicts</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="items" id="blocks"></div>
+    <div id="gatearea"></div>
+    <p style="color:var(--dim);font-size:13px;margin-bottom:4px">Novel progress — blocks merged:</p>
+    <div class="novel-progress"><i id="novelFill"></i></div>
+    <p style="color:var(--faint);font-size:12.5px" id="novelLbl">0 of 3 blocks merged</p>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
 </div>
 
 <h2>The three verdicts</h2>
+<div class="grid three">
+  <div class="card"><h3><span class="stamp" style="color:var(--green)">APPROVE</span></h3>
+    <p>Proposals are applied to the main graph through the OntologyStore. The next block rolls.</p></div>
+  <div class="card"><h3><span class="stamp" style="color:var(--amber)">HOLD</span></h3>
+    <p>Nothing is applied. Processing pauses; the agent explains why and consults the user.</p></div>
+  <div class="card"><h3><span class="stamp" style="color:var(--rose)">REVISE</span></h3>
+    <p>The agent names the parts it doubts; the miniloop re-runs only those parts and returns a revised ChangeSet for the block.</p></div>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Why an agent behind the gate:</b> the miniloop is fast and local, but it cannot know that a nickname in chapter 30 belongs to a character introduced in chapter 2, or that two similar names are twins. The fast system proposes; the context-rich system decides.</li>
+  <li><b>Enforced in code, not convention:</b> <code>applyChangeSet</code> refuses any ChangeSet whose status is not <code>approved</code>. There is no other code path from proposals to the store.</li>
+  <li><b>The audit trail:</b> every proposal carries block ID, sentence IDs, producing patch, and confidence. Every node in the graph can answer: which block, which sentences, which patch, what confidence, whose approval.</li>
+  <li><b>A natural end:</b> when the last block the user asked for merges, ingestion is done — the loop terminates on the work, not on a timer.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/merge/changeset.ts</code> — ChangeSet / ChangeProposal types and lifecycle states.</li>
+  <li><code>src/merge/apply.ts</code> — the single apply path, status-checked.</li>
+  <li><code>src/processing/blockProcessor.ts</code> — the roll: section → miniloop → extract → review callback → apply / stop / revise (max 2 revision rounds in the skeleton, then it asks the user).</li>
+  <li>The Skill teaches the agent its reviewer duties: <code>skills/novel-ontology/SKILL.md</code>.</li>
+</ul>
+
+<h2>Open questions — the merge gate</h2>
 <div class="panel">
-  <div class="gate-flow">
-    <div class="outcome approve" id="ocApprove"><span class="stamp" style="color:var(--green)">APPROVE</span>
-      <p style="color:var(--dim);font-size:13.5px">Proposals are applied to the main graph through the
-      OntologyStore. The next block rolls.</p></div>
-    <div class="outcome hold" id="ocHold"><span class="stamp" style="color:var(--amber)">HOLD</span>
-      <p style="color:var(--dim);font-size:13.5px">Nothing is applied. Processing pauses; the agent explains
-      why and consults the user.</p></div>
-    <div class="outcome revise" id="ocRevise"><span class="stamp" style="color:var(--rose)">REVISE</span>
-      <p style="color:var(--dim);font-size:13.5px">The agent names the parts it doubts; the miniloop re-runs
-      <i>only those parts</i> and returns a revised ChangeSet for the block.</p></div>
-  </div>
-  <p style="color:var(--dim);font-size:13.5px;margin-bottom:4px">Novel progress — blocks merged:</p>
-  <div class="novel-progress"><i id="novelFill"></i></div>
-  <p style="color:var(--faint);font-size:12.5px" id="novelLbl">block 0 of 12 merged</p>
+  <ul class="tight oq" style="font-size:14px">
+    <li>Revision granularity.<span>When the agent sends a ChangeSet back, what is the unit — a single proposal, a scene, or a patch's whole output for the block? The skeleton re-runs the block; finer units need per-proposal patch provenance to pay off.</span></li>
+    <li>Review presentation.<span>How should a ChangeSet be summarized for review — counts by kind, lowest-confidence first, new entities spotlighted? The agent reviews faster with the right digest; the user spot-checks with the same view.</span></li>
+    <li>Auto-approval envelope.<span>Should very high-confidence, low-risk proposal classes (e.g. PRESENT_IN at 0.97) ever skip review in bulk, with the agent auditing samples? Speed vs. the safety property.</span></li>
+    <li>Cross-block consistency checks.<span>Before approving block N, should the gate run standing queries — duplicate-name suspects, state contradictions — against everything merged so far?</span></li>
+  </ul>
 </div>
 
-<h2>Why an agent behind the gate</h2>
-<p class="sub">The miniloop is fast and local, but it cannot hold what the main agent holds:
-earlier chapters, naming consistency across a whole book, who a nickname in chapter 30 really
-belongs to, the user's intent. Making the fast system propose and the context-rich system
-decide is the core safety property of the design — and it is enforced in code, not by
-convention: the apply path refuses any ChangeSet whose status is not <code>approved</code>.</p>
-<p class="sub">ChangeSets double as the <b>audit trail</b>. Every node in the graph can answer:
-which block, which sentences, which patch, what confidence, whose approval. And when the last
-block merges, the novel the user asked for is done — the loop has a natural end.</p>
-
-<div class="pager">
-  <a href="gates.html">← Confidence gates</a>
-  <a href="questions.html">Next: Open questions →</a>
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
 </div>
-
-<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
-Code: <code>src/processing/blockProcessor.ts</code>, <code>src/merge/</code></footer>
-</div>
+<script src="assets/sector.js"></script>
 <script>
-const outs=[...document.querySelectorAll('.outcome')];
-let gi=0, blocks=0;
-setInterval(()=>{
-  outs.forEach(o=>o.classList.remove('lit')); outs[gi].classList.add('lit');
-  if(gi===0){ blocks=Math.min(12, blocks+1);
-    document.getElementById('novelFill').style.width=(blocks/12*100)+'%';
-    document.getElementById('novelLbl').textContent=`block ${blocks} of 12 merged`;
-    if(blocks===12) blocks=0; }
-  gi=(gi+1)%3;
-}, 2400);
+const blocks=document.getElementById('blocks');
+blocks.innerHTML='<span class="chip" id="bk0">Chapter 1</span> <span class="chip" id="bk1">Chapter 2</span> <span class="chip" id="bk2">Chapter 3</span>';
+let merged=0;
+function setProgress(){document.getElementById('novelFill').style.width=(merged/3*100)+'%';document.getElementById('novelLbl').textContent=merged+' of 3 blocks merged';}
+function resetAll(){merged=0;setProgress();document.getElementById('gatearea').innerHTML='';[0,1,2].forEach(i=>document.getElementById('bk'+i).style.borderColor='');}
+const steps=[
+ {t:3000,cap:["Block 1: a clean ChangeSet","18 proposals — 2 new characters, 9 events, all confidences ≥ 0.8. The main agent approves; the merge applies; block 2 rolls."],run(){document.getElementById('gatearea').innerHTML='<div class="verdict good on">ChangeSet cs_b0001 · 18 proposals · <span class="stamp" style="color:var(--green)">APPROVED</span></div>';document.getElementById('bk0').style.borderColor='var(--green)';merged=1;setProgress();}},
+ {t:3400,cap:["Block 2: the agent doubts one part","A nickname proposal looks wrong — it would attach 黑子 as an alias of the wrong character. Verdict: REVISE, scoped to that proposal. The miniloop re-runs just the name patch for those sentences and returns a corrected ChangeSet, which is approved."],run(){document.getElementById('gatearea').innerHTML='<div class="verdict bad on">ChangeSet cs_b0002 · <span class="stamp" style="color:var(--rose)">REVISE</span> · note: “alias 黑子 — check against ch.1 cast”</div>';document.getElementById('bk1').style.borderColor='var(--amber)';}},
+ {t:3000,cap:["Block 2 revised → approved; block 3 held","The corrected alias merges. In block 3, a new character's identity contradicts an earlier chapter — the agent HOLDS and asks the user. Nothing from block 3 touches the graph."],run(){document.getElementById('gatearea').innerHTML='<div class="verdict good on">ChangeSet cs_b0002 (rev. 2) · <span class="stamp" style="color:var(--green)">APPROVED</span></div><div class="verdict warn on">ChangeSet cs_b0003 · <span class="stamp" style="color:var(--amber)">HELD</span> · identity conflict — user consulted</div>';document.getElementById('bk1').style.borderColor='var(--green)';document.getElementById('bk2').style.borderColor='var(--amber)';merged=2;setProgress();}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
 </script>
 </body>
 </html>

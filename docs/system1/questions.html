@@ -2,49 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Open questions — System 1 Design · novel-ontology-pi</title>
-<link rel="stylesheet" href="assets/style.css">
+<meta http-equiv="refresh" content="0; url=index.html">
+<title>moved — Open questions are no longer collected on one page — each sector page carries the questions for its own topic. Start at the overview.</title>
+<link rel="canonical" href="index.html">
 </head>
-<body>
-<div class="wrap">
-
-<nav class="site">
-  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
-  <a class="page" href="index.html">Overview</a>
-  <a class="page" href="demo.html">Live demo</a>
-  <a class="page" href="patches.html">Decision patches</a>
-  <a class="page" href="gates.html">Confidence gates</a>
-  <a class="page" href="merge-gate.html">Blocks &amp; merge gate</a>
-  <a class="page here" href="questions.html">Open questions</a>
-</nav>
-
-<div class="kicker">system 1 · deliberately undecided</div>
-<h1>Open questions — to plan together</h1>
-<p class="sub">The skeleton is shaped so each of these can be decided later without a redesign.
-They are listed here — and in DESIGN.md §9 — so the discussion has a home. Nothing below is
-assumed by the code unless it says so.</p>
-
-<div class="panel">
-  <ul class="tight oq" style="font-size:14px">
-    <li>The patch catalog itself.<span>Which candidate patches (addressee, state changes, event-worthiness, causal candidates, coreference, foreshadowing) earn a v1 slot? What functionality is missing entirely?</span></li>
-    <li>Name-candidate generation.<span>How does the name detector propose candidate spans for <i>new</i> names — speech-verb patterns, quote-adjacent capitalized/CJK sequences, work-LLM nomination, or a mix? The patch interface is ready; the generator is not decided.</span></li>
-    <li>Revision granularity at the merge gate.<span>When the main agent sends a ChangeSet back, is the unit of revision a single proposal, a scene, or a patch's whole output for the block?</span></li>
-    <li>Gate thresholds per patch.<span>Accept / re-ask / escalate cut-offs (0.85 / 0.55 proposed) — to tune with the Jev test key on a golden chapter.</span></li>
-    <li>Window sizing.<span>How many sentences per window, and how much scene context rides along as state, given Jev's ~32k-token context?</span></li>
-    <li>The first test novel.<span>Which sample novel is the first end-to-end case — re-ingest the legacy Index corpus, or start with a shorter dialogue-heavy work?</span></li>
-    <li>Embedding provider / model.<span>Choosing it locks the Ladybug vector index dimension; changing it later means a reindex job.</span></li>
-    <li>Jev access route.<span>Direct api.typesafe.ai vs. a gateway (OpenRouter / Vercel) — settled when the key is handed over, via secure entry.</span></li>
-    <li>Simulation-side reuse.<span>The same Jev connector can gate roleplay later (in-character checks, fork suggestions, branch matching) — designed now or later?</span></li>
-  </ul>
-</div>
-
-<div class="pager">
-  <a href="merge-gate.html">← Blocks &amp; merge gate</a>
-  <a href="index.html">Back to Overview →</a>
-</div>
-
-<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21</footer>
-</div>
+<body style="background:#0b0e14;color:#e8ecf4;font:15px/1.6 -apple-system,'Segoe UI',Roboto,sans-serif;padding:40px">
+<p>Open questions are no longer collected on one page — each sector page carries the questions for its own topic. Start at the overview. This page's content now lives in the sector structure:
+<a style="color:#2dd4bf" href="index.html">index.html</a>.</p>
 </body>
 </html>

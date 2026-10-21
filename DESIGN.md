@@ -7,10 +7,14 @@ parallel-universe story forking. Rebuild of
 `gardianofthedarkness/agentic_chinese_novel_discord_bot` on a clean,
 embedded, no-Docker architecture.
 
-> **System 1 has its own detailed design page:**
-> [`docs/system1/index.html`](docs/system1/index.html) — the autostep miniloop,
-> decision patches, and the merge gate, with animations. This document
-> covers everything else and only summarizes System 1.
+> **System 1 has its own detailed design site:**
+> [`docs/system1/index.html`](docs/system1/index.html) — organized by
+> **functional sector** (one page per sector of the repo, in pipeline
+> order: sectioning, each decision patch, the miniloop engine, extraction,
+> merge gate, storage, timelines, simulation). Every sector page follows
+> the same structure: what it does → its own animated demo → design
+> details → implementation mapping → open questions for that sector only.
+> This document covers the whole and only summarizes System 1.
 
 ---
 

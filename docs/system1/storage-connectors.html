@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Storage connectors — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">10</div>
+<div class="kicker">sector 10 · phase B — knowledge</div>
+<h1>Storage connectors — upload, query, rebuild</h1>
+<p>
+  <span class="badge v1">status: bundle implemented · Ladybug interface defined</span>
+  <span class="badge">repo: <code>src/connectors/bundle.ts</code> · <code>src/connectors/ladybug.ts</code> · <code>src/ontology/</code></span>
+  <span class="badge">engines: JSONL bundle + Ladybug (embedded)</span>
+</p>
+<p class="sub">The connectors that upload to and query from the databases — the sector that replaced
+five Docker services. Two layers with distinct jobs: the <b>bundle</b> (plain JSONL files) is the
+portable source of truth; <b>Ladybug</b> (embedded property graph + Cypher, with native vector and
+full-text indexes in the same file) is the hot query engine rebuilt from it. All access flows
+through one <code>OntologyStore</code> interface.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Approved ChangeSets (writes, via 09 only) · queries from the agent/CLI (reads)</td></tr>
+  <tr><th>Outputs</th><td>Bundle files per novel · Ladybug answers: traversals, FTS hits, vector seeds</td></tr>
+  <tr><th>Depends on</th><td>09 Merge gate (the only writer)</td></tr>
+  <tr><th>Feeds into</th><td>04 Name detector (alias table), 08 Extraction (context), 11 Timelines, 12 Simulation</td></tr>
+</table>
+
+<h2>Demo — build the graph, then ask it something</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="outcol"><h4>Bundle — truth (JSONL)</h4><div id="bundle"></div></div>
+      <div class="outcol"><h4>Ladybug — hot engine (.lbug)</h4><div id="lbug"></div></div>
+    </div>
+    <div id="query" style="margin-top:12px"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Why two layers:</b> the bundle is diffable, git-friendly, shareable by copying a folder, and engine-independent — insurance if Ladybug is ever swapped. Ladybug is a disposable cache: delete <code>graph.lbug</code>, rebuild, same answers.</li>
+  <li><b>GraphRAG in one engine:</b> a question seeds via vector similarity (event summaries) and FTS (exact names), then Cypher traverses — causal chains, presence, timeline order — from the seeds.</li>
+  <li><b>Closed schema, designed once:</b> Ladybug requires declared node/relation tables (<code>src/ontology/schema.ts</code>). The English vocabulary is schema v1; new types arrive as CLI migrations.</li>
+  <li><b>One writer, many readers:</b> only the merge gate writes; queries open read-only. That matches Ladybug's concurrency model exactly — and the CLI's.</li>
+  <li><b>Vector dimension is manifest data:</b> the embedding model + dimension are recorded per novel; changing models triggers <code>novel graph reindex</code>, not silent corruption.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/ontology/store.ts</code> — the <code>OntologyStore</code> interface every read/write passes through.</li>
+  <li><code>src/connectors/bundle.ts</code> — <code>BundleStore</code>: JSONL append/load, manifest. Working today.</li>
+  <li><code>src/connectors/ladybug.ts</code> — <code>LadybugStore</code>: interface-complete; driver wiring (<code>@ladybugdb/core</code> + schema DDL) is the next implementation step.</li>
+  <li>CLI surface: <code>novel graph build|reindex</code>, <code>novel bundle export|import</code>, <code>novel query</code>, <code>novel search</code>.</li>
+</ul>
+
+<h2>Open questions — storage</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Embedding provider.<span>Default to the work LLM provider's embedding endpoint, bundle a small local model, or both? This locks the index dimension per novel — the manifest records it, but the default UX matters.</span></li>
+    <li>Incremental sync.<span>After each approved block, append deltas to Ladybug incrementally, or rebuild per block? Rebuild is simpler and safe; incremental is faster for long novels. Where's the crossover?</span></li>
+    <li>Library layout.<span>Many novels, one user: a <code>novels/</code> library folder with per-novel bundles — plus a cross-novel index? (Cross-novel character universes are a real light-novel pattern…)</span></li>
+    <li>Bundle in git.<span>Should a novel's bundle live in its own git repo for history/diffing of merges? ChangeSets map naturally to commits.</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+function resetAll(){document.getElementById('bundle').innerHTML='';document.getElementById('lbug').innerHTML='';document.getElementById('query').innerHTML='';}
+const steps=[
+ {t:2600,cap:["Approved merges land in the bundle","Each novel is a folder of JSONL: entities, relations, events, scenes, timelines, branches + a manifest. Plain text — diff it, copy it, version it."],run(){document.getElementById('bundle').innerHTML=['entities.jsonl','relations.jsonl','events.jsonl','scenes.jsonl','timelines.jsonl','branches.jsonl','manifest.json'].map(f=>`<div><span class="chip">${f}</span></div>`).join('');}},
+ {t:2600,cap:["graph build → Ladybug","The hot engine is built from the bundle and indexed: HNSW vector index over event summaries, BM25 full-text over names and summaries. Delete the .lbug and this step recreates it exactly."],run(){document.getElementById('lbug').innerHTML='<span class="chip">graph.lbug</span><div style="margin-top:6px"><span class="chip">vector index · HNSW · cosine</span> <span class="chip">FTS · BM25</span> <span class="chip">Cypher ready</span></div>';}},
+ {t:3200,cap:["Query: seed, then traverse","“Who was at the café when Uiharu arrived?” — FTS seeds the name, vector seeds the event, Cypher walks PRESENT_IN from the scene. One engine, one query path."],run(){document.getElementById('query').innerHTML='<div class="verdict good on">Q: Who was at the café when Uiharu arrived?<br>seed(FTS): 初春饰利 → evt_…41 · traverse: evt —IN_SCENE→ Scene B —PRESENT_IN⁻¹→ <b>Mikoto · Kuroko · Uiharu</b></div>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

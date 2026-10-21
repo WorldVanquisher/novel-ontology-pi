@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12 Simulation — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">12</div>
+<div class="kicker">sector 12 · phase C — use</div>
+<h1>Simulation — characters who know only what they should</h1>
+<p>
+  <span class="badge open">status: designed, not yet implemented</span>
+  <span class="badge">repo: planned <code>src/simulation/</code> · CLI <code>novel simulate</code></span>
+  <span class="badge">model: work LLM (generation) + Jev (gates)</span>
+</p>
+<p class="sub">The payoff sector. A simulated character is not a persona prompt — it is a
+<b>state folded from the event stream</b> up to a point on a timeline (canon or a branch):
+what they know, feel, want, and how they speak, all derived from what actually happened to them
+<i>by then</i>. Talk to Mikoto before the confession and after it, and you talk to two honestly
+different people.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Character + timeline/branch + current point · folded state · voice evidence (their turns, 06)</td></tr>
+  <tr><th>Outputs</th><td>In-character replies; new branch events when the conversation itself advances a branch's story</td></tr>
+  <tr><th>Depends on</th><td>10 Storage (state fold), 11 Timelines (which world), 06 Turns (voice)</td></tr>
+  <tr><th>Feeds into</th><td>11 Branches (conversation events can become branch deltas — via the merge discipline, not silently)</td></tr>
+</table>
+
+<h2>Demo — state first, voice second</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="outcol" style="max-width:300px"><h4>御坂美琴 · state at evt_…77 (canon)</h4>
+        <div style="font-size:12.5px">knows about the patrol <div class="statebar"><i id="sb1"></i></div></div>
+        <div style="font-size:12.5px">trust in Kuroko <div class="statebar"><i id="sb2"></i></div></div>
+        <div style="font-size:12.5px">awareness of the experiment <div class="statebar"><i id="sb3"></i></div></div>
+        <p style="font-size:12px;color:var(--faint);margin:6px 0 0">knowledge she gains in ch. 9 is <b>absent</b> — the fold stops here.</p>
+      </div>
+      <div style="flex:2;min-width:260px" id="chat"></div>
+    </div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>State = fold, never a row:</b> emotions, knowledge, goals and relationships are computed by replaying events up to the point. Move the point, the person changes — on canon and on every branch, consistently.</li>
+  <li><b>Ignorance is a feature:</b> the fold is also a wall. Facts from later chapters or other branches are not in the prompt, so the character cannot leak them.</li>
+  <li><b>Voice from evidence:</b> speech style is grounded in the character's own attributed turns (06) — forms of address, verbal tics, sentence length — not in a hand-written persona sketch.</li>
+  <li><b>Jev as the referee:</b> the same decision connector can gate replies — <i>in_character</i> (noul), <i>would_say_this</i> vs. alternatives (choice), divergence drift (score) — the simulation-side reuse of System 1.</li>
+  <li><b>Conversations can become canon-for-a-branch:</b> when talk turns into story, the resulting events are branch deltas proposed through the same ChangeSet discipline — simulation never silently rewrites a world.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li>State fold: <code>OntologyStore.getStateAt()</code> (10) over the timeline prefix (11).</li>
+  <li>Generation: the work LLM via <code>src/connectors/llm.ts</code>, prompted with folded state + retrieved turns + scene context from Ladybug hybrid search.</li>
+  <li>CLI surface: <code>novel simulate &lt;character&gt; [--branch &lt;id&gt;] [--at &lt;event-id&gt;]</code>; Discord later becomes a thin client of this command.</li>
+</ul>
+
+<h2>Open questions — simulation</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Referee strictness.<span>How hard should Jev gate replies — block out-of-character lines, regenerate, or just flag drift? Latency vs. fidelity per message is a real trade.</span></li>
+    <li>Multi-character scenes.<span>Simulating a conversation among several characters (the legacy bot's group roleplay) — one fold per character, one speaker-choice per turn: reuse sector 06's question in reverse?</span></li>
+    <li>When talk becomes story.<span>What threshold turns chat events into proposed branch deltas — every session, on user command, or when Jev scores a beat as event-worthy?</span></li>
+    <li>Voice drift over long sessions.<span>Re-anchor to retrieved turns every N messages? Measure drift how?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+function resetAll(){['sb1','sb2','sb3'].forEach(id=>document.getElementById(id).style.width='20%');document.getElementById('chat').innerHTML='';}
+const steps=[
+ {t:2600,cap:["Fold the state at the point","Before a word is generated, the event stream is replayed up to evt_…77. Her ch. 9 knowledge isn't in the fold — she cannot know it, so she cannot leak it."],run(){document.getElementById('sb1').style.width='85%';document.getElementById('sb2').style.width='72%';document.getElementById('sb3').style.width='8%';}},
+ {t:3200,cap:["Talk — grounded in her own turns","Replies draw voice from her attributed dialogue: the blunt sentences, the tsundere deflections. Ask about the experiment and she deflects — at this point she genuinely doesn't know."],run(){document.getElementById('chat').innerHTML='<div class="chatline user on">美琴，你知道那个实验的事吗？</div><div class="chatline char on">「实验？……不知道你在说什么。别随便打听别人的事。」<br><small style="color:var(--faint)">(What experiment? …I don\'t know what you mean. Stop prying.)</small></div>';}},
+ {t:2800,cap:["Same question, later point, different person","Re-fold at ch. 10 and the awareness bar is full — the answer changes because the person did. That is the entire value of the ontology underneath."],run(){document.getElementById('sb3').style.width='95%';document.getElementById('chat').innerHTML+='<div class="chatline char on">「……你也知道了吗。那件事，我不会再让它继续下去。」<br><small style="color:var(--faint)">(…So you know too. That — I won\'t let it continue.)</small></div>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

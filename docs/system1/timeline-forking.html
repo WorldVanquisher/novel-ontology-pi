@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>11 Timelines &amp; forking — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">11</div>
+<div class="kicker">sector 11 · phase C — use</div>
+<h1>Timelines &amp; forking — parallel universes from one canon</h1>
+<p>
+  <span class="badge open">status: designed (salvaged from the legacy timeline design), not yet implemented</span>
+  <span class="badge">repo: planned <code>src/timeline/</code> · types in <code>src/ontology/types.ts</code></span>
+  <span class="badge">decision assist: Jev · <span class="prim score">score</span> / <span class="prim choice">choice</span></span>
+</p>
+<p class="sub">Canon is an event-sourced timeline: immutable, totally ordered. A <b>fork</b> is what the
+user came for — they browse the timeline, <b>select a time point</b>, and a parallel universe
+branches off there: sharing everything before the point, diverging after it, with canon never mutated.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>The canon event stream (10) + the user's chosen fork event + a branch label</td></tr>
+  <tr><th>Outputs</th><td><code>Branch { parentTimelineId, forkEventId, label }</code> + a character-state snapshot at the fork point; branch delta events thereafter</td></tr>
+  <tr><th>Depends on</th><td>08 Extraction (events), 10 Storage</td></tr>
+  <tr><th>Feeds into</th><td>12 Simulation (runs on canon or on a branch)</td></tr>
+</table>
+
+<h2>Demo — pick a point, split the world</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="tlwrap" style="height:120px">
+      <div class="tlline"></div>
+      <div class="tlbranch" id="branchline" style="top:64px"></div>
+      <div id="dotsbox"></div>
+      <div class="tllabel" style="left:6%">ch.1<br>meeting</div>
+      <div class="tllabel" style="left:30%">ch.4<br>the promise</div>
+      <div class="tllabel" style="left:54%">ch.7<br>the confession</div>
+      <div class="tllabel" style="left:78%">ch.9<br>the accident</div>
+      <div class="tllabel" id="branchlbl" style="left:54%;top:86px;color:var(--teal);opacity:0;transition:opacity .6s">branch: “she says yes”</div>
+    </div>
+    <div id="forkout"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Fork = pointer + snapshot + deltas:</b> a branch stores its fork event, a fold of character states at that point, and only its own new events. No copying the canon prefix — branches are cheap, so users can keep many.</li>
+  <li><b>Canon is never mutated:</b> branch events live on the branch. Deleting a branch loses nothing canonical.</li>
+  <li><b>Browsing is importance-led:</b> the fork-point browser lists events by chapter with their importance scores (extraction + the event-worthiness candidate), so the interesting seams surface first — but any event is a legal fork point.</li>
+  <li><b>Decision assist, not decision maker:</b> Jev can score "how divergent would a fork here be" and match "which existing branch is this conversation closest to" (the legacy UniverseFingerprint idea, rebuilt on distributions) — the user still picks the point.</li>
+  <li><b>Salvaged design:</b> the legacy repo's TimelineNode tree and branch auto-selection live on here, re-expressed on the event-sourced model.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li>Types ready: <code>Branch</code>, <code>CharacterStateAtPoint</code> in <code>src/ontology/types.ts</code>; <code>FORKS_FROM</code> relation + <code>Branch</code> node table in schema v1.</li>
+  <li>CLI surface: <code>novel timeline list|show</code>, <code>novel fork create --at &lt;event-id&gt; --label &lt;name&gt;</code>.</li>
+  <li>State snapshot = <code>OntologyStore.getStateAt(characterId, eventId)</code> folded over the canon prefix.</li>
+</ul>
+
+<h2>Open questions — timelines &amp; forking</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Branch-of-branch.<span>Forking from inside a branch — supported by the model (parent can be any timeline), but does the UX and the state fold stay comprehensible two levels deep?</span></li>
+    <li>Divergence measurement.<span>How do we quantify how far a branch has drifted (event overlap, state distance, relationship deltas) — and does the user see a number, a summary, or both?</span></li>
+    <li>Branch discovery.<span>When a simulation conversation drifts, should the system suggest "this now matches branch X" (legacy auto-selection at similarity &gt; 0.6) or wait to be asked?</span></li>
+    <li>Canon updates under live branches.<span>If ingestion later adds canon events before a fork point (a re-merge), do branch snapshots pin the old fold or re-fold? Pinning is safer; say so explicitly.</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const POS=[6,30,54,78,94];
+const dotsbox=document.getElementById('dotsbox');
+dotsbox.innerHTML=POS.map((p,i)=>`<div class="tldot" id="d${i}" style="left:${p}%"></div>`).join('')+
+  POS.slice(3).map((p,i)=>`<div class="tldot" id="bd${i}" style="left:${p+4}%;top:58px;border-color:var(--teal)"></div>`).join('');
+function resetAll(){POS.forEach((_,i)=>document.getElementById('d'+i).className='tldot');document.getElementById('branchline').style.width=0;document.getElementById('branchlbl').style.opacity=0;document.getElementById('forkout').innerHTML='';}
+const steps=[
+ {t:2400,cap:["Canon: one ordered event stream","Every merged event takes its place on the canon timeline — chapter-anchored, importance-scored, immutable."],run(){POS.forEach((_,i)=>document.getElementById('d'+i).classList.add('hit'));}},
+ {t:2600,cap:["The user selects the time point","Not the system — the user. Here: the confession in chapter 7. Everything before it is shared history; everything after is negotiable."],run(){document.getElementById('d2').classList.add('fork');document.getElementById('forkout').innerHTML='<span class="chip" style="border-color:var(--amber)">fork point: evt_…77 · the confession · importance 0.92</span>';}},
+ {t:2800,cap:["The branch forks","A state snapshot is folded at the fork point (who knows what, who feels what, who holds what). The branch appends only its own delta events — canon, above, continues untouched."],run(){const bl=document.getElementById('branchline');bl.style.left='54%';bl.style.width='42%';document.getElementById('branchlbl').style.opacity=1;document.getElementById('forkout').innerHTML+=' <span class="chip">＋ Branch “she says yes” · snapshot ×3 characters · deltas: 0</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

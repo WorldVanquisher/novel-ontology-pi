@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 Speaker attribution — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">06</div>
+<div class="kicker">sector 06 · phase A — structure · decision patch</div>
+<h1>Speaker attribution — whose line is it</h1>
+<p>
+  <span class="badge v1">status: v1 patch (skeleton)</span>
+  <span class="badge">repo: <code>src/autostep/patches/speaker-attribution.ts</code></span>
+  <span class="badge">model: Jev · <span class="prim choice">choice</span></span>
+</p>
+<p class="sub">The last structural patch: it takes the dialogue units from sector 03 and decides
+<b>which character each line belongs to</b> — and, as a sub-function, who the line is addressed to.
+Its output — turns with speakers — is the skeleton extraction (08) hangs events on.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>Dialogue units (03) + characters present (05) + last speaker + speech-tag sentences</td></tr>
+  <tr><th>Outputs</th><td>Turns: <code>{ speakerId, addresseeId, sentenceIds }</code> per unit → SPEAKS_TO / ADDRESSES material for extraction</td></tr>
+  <tr><th>Depends on</th><td>03 Dialogue units, 05 Presence</td></tr>
+  <tr><th>Feeds into</th><td>08 Extraction, 12 Simulation (voice evidence)</td></tr>
+</table>
+
+<h2>Demo — lines find their speakers</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div class="items" id="units"></div>
+    <div id="turns"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>Decision questions</h2>
+<div class="qcard"><b>dialogue_speaker</b> · <span class="prim choice">choice</span> — Who speaks this dialogue unit? Options: the characters present + narrator + unknown. Criteria carry the craft: speech style, forms of address, the previous turn's speaker (dialogue usually alternates), and who the narration focuses on.</div>
+<div class="qcard"><b>dialogue_addressee</b> · <span class="prim choice">choice</span> <span class="badge cand">candidate</span> — Who is being spoken to? Options: present characters + group + none. Needed for ADDRESSES edges in multi-party scenes.</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Choice fits exactly:</b> a turn has one speaker — this is the one patch where Jev's single-pick primitive is precisely the shape of the problem.</li>
+  <li><b>"Unknown" is a first-class answer:</b> an unresolved speaker escalates rather than guessing — a wrong speaker poisons voice learning in simulation; an unknown merely waits.</li>
+  <li><b>Evidence is stored:</b> the winning probability rides with the turn, so the merge gate can sort its review by shakiest attributions first.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/autostep/patches/speaker-attribution.ts</code> — one <code>choice</code> per unit from <code>ctx.accepted.dialogueUnits</code>; unresolved units become escalations.</li>
+  <li>Runs last in the v1 registry — it consumes the most context of any patch.</li>
+</ul>
+
+<h2>Open questions — speaker attribution</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>First-person narration.<span>In I-novels the narrator IS a character. Does "narrator" collapse into that character once known, series-wide?</span></li>
+    <li>Interruptions and overlaps.<span>Two characters finish each other's sentences; a line is cut off and resumed. Turn model may need "interrupted" and "resumed" links.</span></li>
+    <li>Speakers not yet in the graph.<span>A voice from off-page whose name sector 04 hasn't proposed yet — attribute to a placeholder and reconcile at the gate?</span></li>
+    <li>Addressee in group scenes.<span>Speaking to a room vs. to one person in it — how much does extraction actually gain from addressee edges? Decide before promoting the candidate question.</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const U=[["Turn 1 · [s0001]","「姐姐大人，您迟到了十分钟。」","白井黑子 Kuroko → 御坂美琴","0.93"],["Turn 2 · [s0003]","「初春说她马上就到。」","白井黑子 Kuroko → the table","0.81"],["Turn 3 · [s0005]","「抱歉，我来晚了！」","初春饰利 Uiharu → everyone","0.96"]];
+const box=document.getElementById('units');
+box.innerHTML=U.map(([t,q],i)=>`<div class="item dlg on" id="u${i}"><small>${t}</small>${q}</div>`).join('');
+function resetAll(){document.getElementById('turns').innerHTML='';}
+const steps=[
+ {t:3000,cap:["One choice per unit, candidates = the present set","Turn 1: the honorific 姐姐大人 is itself the evidence — only Kuroko calls Mikoto that. Turn 2 stays with Kuroko (continuation, no new speaker cue). Turn 3 follows the entrance."],run(){document.getElementById('turns').innerHTML=U.map(([t,q,who,c])=>`<div class="verdict good on" style="margin:6px 0">🗣 <b>${who}</b> · confidence ${c} · ${q}</div>`).join('');}},
+ {t:2400,cap:["Turns out, structure complete","Speaker + addressee + sentence IDs per turn. Sector 08 will read these turns and ask: what happened here, who changed, what caused what."],run(){}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

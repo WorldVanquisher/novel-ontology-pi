@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>07 Miniloop engine — novel-ontology-pi design</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="sectorno">07</div>
+<div class="kicker">sector 07 · phase A — structure · the engine</div>
+<h1>Miniloop engine — windows, batching, gates, recursion</h1>
+<p>
+  <span class="badge v1">status: implemented (skeleton)</span>
+  <span class="badge">repo: <code>src/autostep/miniloop.ts</code></span>
+  <span class="badge">model: Jev connector · <code>src/connectors/jev.ts</code></span>
+</p>
+<p class="sub">The patches (02–06) are the questions; this sector is the <b>loop that asks them</b>:
+it slides a window over the block's sentences, batches each patch's questions into one Jev call,
+routes every probability through <b>confidence gates</b>, recurses when uncertain — and collects
+everything into the block's ChangeSet. It is the "autostep" in System 1's name.</p>
+
+<table class="io">
+  <tr><th>Inputs</th><td>One block's sentences (01) + known entities + state summary</td></tr>
+  <tr><th>Outputs</th><td>A ChangeSet of proposals + escalations list + accepted structure (scenes, turns)</td></tr>
+  <tr><th>Depends on</th><td>01–06 (the patches it runs), Jev connector</td></tr>
+  <tr><th>Feeds into</th><td>08 Extraction, 09 Merge gate</td></tr>
+</table>
+
+<h2>Demo — one window, three fates</h2>
+<div class="panel">
+  <div class="caption" id="caption"><span class="stepno">▶</span>The demo plays and loops on its own.</div>
+  <div class="progressdots" id="dots"></div>
+  <div class="stage">
+    <div style="font-size:12.5px;color:var(--dim)">window: <span class="mono" id="winlbl">—</span></div>
+    <div class="items" id="items"></div>
+    <div id="fates"></div>
+  </div>
+  <p style="margin-top:12px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>The gates — how a probability becomes a decision</h2>
+<div class="panel">
+  <div class="gatebar">
+    <div class="marker"></div>
+    <span class="lbl" style="left:24%">‹ gate.reask · <b style="color:var(--rose)">escalate</b><br>subdivide the window, or hand this unit to the work LLM</span>
+    <span class="lbl" style="left:70%">between · <b style="color:var(--amber)">re-ask</b><br>expand context (previous/next scene), decide again</span>
+    <span class="lbl" style="left:94%">≥ gate.accept<br><b style="color:var(--green)">accept</b></span>
+  </div>
+  <p style="color:var(--dim);font-size:13.5px;margin-top:6px">Gates are <b>per patch</b> (each patch declares its own accept/reask in code):
+  presence holds the strictest line because it feeds simulation state; the engine only enforces the routing.</p>
+</div>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>One call per window per patch:</b> all of a patch's questions for the window go in a single batched Jev request with one compact state snapshot — never raw chapters (Jev's context is ~32k, and state summaries keep it fast and cheap).</li>
+  <li><b>Accepted decisions compound:</b> patches run in registry order and read each other's accepted output from shared context — the engine's job is ordering and bookkeeping, not judging.</li>
+  <li><b>Escalation is a routing decision, not a failure:</b> subdivided windows and LLM-adjudicated units come back into the same loop; their verdicts are written into context and the window advances.</li>
+  <li><b>The engine never writes:</b> its only outputs are proposals and escalations. The hard invariant — enforced again at apply time in sector 09.</li>
+  <li><b>Testable for free:</b> the Jev connector is an interface; tests inject a mock with recorded probabilities and verify gates, grouping and ChangeSet accumulation deterministically.</li>
+</ul>
+
+<h2>Implementation</h2>
+<ul class="tight" style="font-size:14px">
+  <li><code>src/autostep/miniloop.ts</code> — <code>Miniloop.runBlock()</code>: window loop → patch loop → accumulate.</li>
+  <li><code>src/connectors/jev.ts</code> — <code>DecisionModel</code> interface, <code>JevClient</code> (Bearer key from env, pinned model), <code>MockDecisionModel</code> for tests.</li>
+  <li>Patch registry order lives in <code>src/autostep/patches/index.ts</code>.</li>
+</ul>
+
+<h2>Open questions — the engine</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>Window sizing.<span>40 sentences is the skeleton's default. Larger windows give Jev more context per question but dilute the state summary; smaller ones cost more calls. Tune on the golden chapter.</span></li>
+    <li>Threshold calibration.<span>0.85 / 0.55 are starting proposals per patch. With the test key, we can measure real distributions and set gates from data, not vibes.</span></li>
+    <li>Escalation budget.<span>How many LLM adjudications per block before the engine should stop and let the merge gate see the block as-is? A cost/quality dial the user may want control of.</span></li>
+    <li>Cross-window memory.<span>How much accepted structure (last scene, last speaker, open threads) rides in the state summary — and does a "story so far" digest get maintained per novel?</span></li>
+  </ul>
+</div>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · design by sector · v0.1 · 2026-10-21</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+const S=["御坂美琴推开咖啡店的门，环顾四周。","「姐姐大人，您迟到了十分钟。」","白井黑子坐在窗边，晃了晃手中的杯子。","「初春说她马上就到。」","话音未落，初春饰利推门进来。","「抱歉，我来晚了！」","美琴想起黑子早上提到的风纪委员巡逻。","她走到窗边坐下，点了冰咖啡。"];
+const box=document.getElementById('items');
+box.innerHTML=S.map((t,i)=>`<div class="item" id="w${i}"><small>s000${i}</small>${t}</div>`).join('');
+function setWin(a,b){S.forEach((_,i)=>{const e=document.getElementById('w'+i);e.classList.toggle('on',i>=a&&i<=b);});document.getElementById('winlbl').textContent=`s000${a}–s000${b}`;}
+function resetAll(){setWin(-1,-1);document.getElementById('winlbl').textContent='—';document.getElementById('fates').innerHTML='';}
+const steps=[
+ {t:2400,cap:["The window opens on s0000–s0003","Each patch asks its questions for just these sentences, in one batched Jev call, against a compact state summary."],run(){setWin(0,3);document.getElementById('fates').innerHTML='<span class="chip">→ Jev: 23 questions, 1 call</span>';}},
+ {t:2800,cap:["Probabilities return — and route","Most units clear the accept gate. One doesn't: the speaker of s0003 sits at 0.68 — the re-ask band."],run(){document.getElementById('fates').innerHTML='<div class="verdict good on">✓ accept · 21 units ≥ 0.85</div><div class="verdict warn on">↻ re-ask · speaker(s0003) = 0.68</div>';}},
+ {t:2800,cap:["Recursion: the window expands, the question repeats","The re-ask pulls the previous scene into the state. With the entrance in view, speaker(s0003) resolves to 0.9 — accepted. The expensive LLM was never called."],run(){setWin(0,5);document.getElementById('fates').innerHTML='<div class="verdict good on">✓ accept after re-ask · speaker(s0003) = 0.90</div><div class="verdict bad on">⇪ escalate · is_new_name(初春饰利) — discoveries always go up</div>';}},
+ {t:2200,cap:["The window advances","Accepted structure compounds; the block's proposals so far sit in its ChangeSet. The loop rolls until the block ends."],run(){setWin(4,7);document.getElementById('fates').innerHTML='<span class="chip">ChangeSet b0007 · 5 proposals · 1 escalation</span>';}},
+];
+runSectorDemo(steps.map(s=>({...s,reset:resetAll})));
+</script>
+</body>
+</html>

@@ -9,15 +9,7 @@
 <body>
 <div class="wrap">
 
-<nav class="site">
-  <a class="brand" href="index.html">novel-ontology-pi<small>System 1 · detailed design</small></a>
-  <a class="page here" href="index.html">Overview</a>
-  <a class="page" href="demo.html">Live demo</a>
-  <a class="page" href="patches.html">Decision patches</a>
-  <a class="page" href="gates.html">Confidence gates</a>
-  <a class="page" href="merge-gate.html">Blocks &amp; merge gate</a>
-  <a class="page" href="questions.html">Open questions</a>
-</nav>
+<nav class="site" id="sitenav"></nav>
 
 <div class="kicker">detailed design · overview</div>
 <h1>System 1 — The Autostep Miniloop</h1>
@@ -158,26 +150,35 @@ answers with probabilities, not text, in ~70–500&nbsp;ms, batched: one call pe
 The one hard boundary in the graph: <b>nothing crosses from ChangeSet to storage except through the
 merge gate, on the main agent's approval.</b></p>
 
-<h2>The pages</h2>
+<h2>The sectors — one page per functionality</h2>
+<p class="sub">This site is divided the way the repo is: by the <b>functional sectors we will
+implement</b>, in pipeline order. Every sector page follows the same structure —
+<b>what it does → its own demo → design details → implementation mapping → open questions
+for that sector only</b>.</p>
+
+<h3 style="margin-top:22px">Phase A — Structure <span style="color:var(--faint);font-size:13px">(System 1: from raw text to structure)</span></h3>
 <div class="grid three">
-  <a class="card" href="demo.html"><h3>▶ Live demo</h3>
-    <p>One block, seven sentences, animated end to end: sectioning → scene boundary → dialogue →
-    names → presence → speakers → ChangeSet.</p><span class="go">Watch it run →</span></a>
-  <a class="card" href="patches.html"><h3>🧩 Decision patches</h3>
-    <p>One functionality = one patch, each with its own Jev questions, primitives and gates.
-    The v1 set, plus the candidate catalog.</p><span class="go">See the patches →</span></a>
-  <a class="card" href="gates.html"><h3>🎚 Confidence gates</h3>
-    <p>How a probability becomes a decision: accept, re-ask with more context, subdivide,
-    or escalate to the work LLM.</p><span class="go">See the gates →</span></a>
-  <a class="card" href="merge-gate.html"><h3>🛂 Blocks &amp; merge gate</h3>
-    <p>Processing rolls chapter by chapter; every block's proposals wait at the gate for the
-    main agent: approve, hold, or revise.</p><span class="go">See the gate →</span></a>
-  <a class="card" href="questions.html"><h3>❓ Open questions</h3>
-    <p>Everything deliberately left undecided, to plan together: the patch catalog, revision
-    granularity, thresholds, windowing, and more.</p><span class="go">See what's open →</span></a>
-  <a class="card" href="../../DESIGN.md"><h3>📐 DESIGN.md</h3>
-    <p>The overall architecture in document form: storage, schema v1, CLI surface, model
-    routing, and the test plan.</p><span class="go">Read the doc →</span></a>
+  <a class="card" href="sectioning.html"><h3>01 · Sectioning</h3><p>Intake &amp; auto sentence segregation. Deterministic code — the only sector with no model at all.</p><span class="go">Open →</span></a>
+  <a class="card" href="scene-boundary.html"><h3>02 · Scene boundary</h3><p>Patch: where scenes start, and why — location, time, viewpoint.</p><span class="go">Open →</span></a>
+  <a class="card" href="dialogue-detector.html"><h3>03 · Dialogue detector</h3><p>Patch: which sentences are dialogue, stitched into turns.</p><span class="go">Open →</span></a>
+  <a class="card" href="name-detector.html"><h3>04 · Name detector</h3><p>Patch: known names by code scan; new names &amp; nicknames by decision.</p><span class="go">Open →</span></a>
+  <a class="card" href="presence-detector.html"><h3>05 · Presence detector</h3><p>Patch: who is in the scene vs. merely mentioned.</p><span class="go">Open →</span></a>
+  <a class="card" href="speaker-attribution.html"><h3>06 · Speaker attribution</h3><p>Patch: which character each dialogue belongs to — and who it addresses.</p><span class="go">Open →</span></a>
+  <a class="card" href="miniloop-engine.html"><h3>07 · Miniloop engine</h3><p>The autostep loop itself: windows, batched Jev calls, confidence gates, recursion.</p><span class="go">Open →</span></a>
+</div>
+
+<h3 style="margin-top:22px">Phase B — Knowledge <span style="color:var(--faint);font-size:13px">(from structure to the ontology, through the gate)</span></h3>
+<div class="grid three">
+  <a class="card" href="extraction.html"><h3>08 · Extraction</h3><p>The work LLM reads structured scenes and proposes events, causality, state changes.</p><span class="go">Open →</span></a>
+  <a class="card" href="merge-gate.html"><h3>09 · Merge gate</h3><p>Block-by-block rolling; ChangeSets accumulate; the main agent approves, holds, revises.</p><span class="go">Open →</span></a>
+  <a class="card" href="storage-connectors.html"><h3>10 · Storage connectors</h3><p>Upload/query: the JSONL bundle (truth) and the Ladybug graph engine (hot queries).</p><span class="go">Open →</span></a>
+</div>
+
+<h3 style="margin-top:22px">Phase C — Use <span style="color:var(--faint);font-size:13px">(what the ontology powers)</span></h3>
+<div class="grid three">
+  <a class="card" href="timeline-forking.html"><h3>11 · Timelines &amp; forking</h3><p>Canon as an event timeline; the user picks a time point; a branch forks, canon untouched.</p><span class="go">Open →</span></a>
+  <a class="card" href="simulation.html"><h3>12 · Simulation</h3><p>Character state as a fold of events; roleplay that knows only what the character should know.</p><span class="go">Open →</span></a>
+  <a class="card" href="../../DESIGN.md"><h3>📐 DESIGN.md</h3><p>The overall architecture in document form: decisions, schema v1, CLI surface, test plan.</p><span class="go">Read the doc →</span></a>
 </div>
 
 <h2>Two loops, in one breath</h2>
@@ -196,5 +197,6 @@ merge gate, on the main agent's approval.</b></p>
 <footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
 Code: <code>src/autostep/</code> · Doc: <a href="../../DESIGN.md">DESIGN.md</a></footer>
 </div>
+<script src="assets/sector.js"></script>
 </body>
 </html>
