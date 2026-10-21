@@ -25,6 +25,7 @@ const sectorJs = await readFile(join(site, "assets", "sector.js"), "utf8");
 const PAGES = [
   "index.html",
   "roadmap.html",
+  "playground-frontend.html",
   "sectioning.html",
   "scene-boundary.html",
   "dialogue-detector.html",
@@ -99,7 +100,7 @@ const shell = `<!DOCTYPE html>
 <script>
 const PAGES = ${JSON.stringify(pages).replace(/<\/script/gi, "<\\/script")};
 const ORDER = ${JSON.stringify(PAGES)};
-const LABELS = { "index.html": "Overview", "roadmap.html": "🗺 Roadmap", "sectioning.html": "01 Sectioning",
+const LABELS = { "index.html": "Overview", "roadmap.html": "🗺 Roadmap", "playground-frontend.html": "13 Playground", "sectioning.html": "01 Sectioning",
   "scene-boundary.html": "02 Scene boundary", "dialogue-detector.html": "03 Dialogue",
   "name-detector.html": "04 Names", "presence-detector.html": "05 Presence",
   "speaker-attribution.html": "06 Speakers", "miniloop-engine.html": "07 Miniloop engine",

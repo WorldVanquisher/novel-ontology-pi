@@ -18,7 +18,7 @@ is decided earlier than it needs to be.</p>
 <div class="panel" style="border-color:var(--teal)">
   <b>Update rule:</b> this page is updated in GitHub <b>every time something is completed</b> —
   phase statuses and the decision log here are the project's progress record of truth.
-  <span style="color:var(--dim)">Last updated: 2026-10-21 · Phase 1 underway — Ladybug driver, block cutting, graph build, Cypher retrieval layer, and the changeset gate are implemented and tested; model wiring waits on keys.</span>
+  <span style="color:var(--dim)">Last updated: 2026-10-21 · Phase 1 core implemented; sector 13 (playground frontend, Reagraph) designed with animated demo; model wiring waits on keys.</span>
 </div>
 
 <div class="rtl">
@@ -57,6 +57,7 @@ is decided earlier than it needs to be.</p>
       <li><b>Story-so-far digest</b> (07): cross-window memory in the state summary</li>
     </ul>
     <p class="mile">Milestone: the miniloop's decisions are measured, not hoped — precision/recall known per patch.</p>
+    <p style="color:var(--dim);font-size:13px">Parallel track — <b>Playground frontend</b> (13): event emission from the CLI + Live Theater v1 on Reagraph, so ingestion becomes watchable as soon as live models land.</p>
   </div>
 
   <div class="rphase">
@@ -98,6 +99,7 @@ is decided earlier than it needs to be.</p>
   <tr><td>3</td><td>Work LLM for testing</td><td>DeepSeek API (his), via the Pi provider layer</td><td><span class="status done">✓ decided</span></td></tr>
   <tr><td>4</td><td>Embedding model</td><td><b>Deferred</b> (revised 2026-10-21): graph-first — verify relational Cypher can't satisfy our needs before adding any embedding model. Fallback if needed: lightweight local CPU model (~500–1000 dims), vector recall top-32 → Jev post-selection</td><td><span class="status plan">deferred</span></td></tr>
   <tr><td>5</td><td>Name-candidate generation</td><td>Hybrid: plain-text scan against a <b>cumulative registry of every name ever seen in this novel</b>; a new candidate triggers a <b>zero-context LLM call</b> to extract the new name</td><td><span class="status done">✓ decided</span></td></tr>
+  <tr><td>6</td><td>Playground frontend (sector 13)</td><td><b>Reagraph</b> (React, true 3D, clustering/badges built in) + React Flow pipeline strip; <b>standalone-first, host-agnostic</b> — a VS Code webview wrap stays possible later; extension-host research concluded no existing app provides this for free</td><td><span class="status done">✓ decided</span></td></tr>
 </table>
 
 <h2>How open questions map to phases</h2>

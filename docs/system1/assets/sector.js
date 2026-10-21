@@ -15,6 +15,7 @@ const SECTORS = [
   { n: "10", slug: "storage-connectors", label: "Storage" },
   { n: "11", slug: "timeline-forking", label: "Timelines & forks" },
   { n: "12", slug: "simulation", label: "Simulation" },
+  { n: "13", slug: "playground-frontend", label: "Playground frontend" },
 ];
 
 function renderNav() {

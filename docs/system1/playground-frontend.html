@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13 · Playground frontend — System 1 design · novel-ontology-pi</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .pg { background:#0a0e16; border:1px solid var(--line); border-radius:14px; overflow:hidden }
+  .pgbar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#111827;
+    border-bottom:1px solid var(--line); font-size:12px; color:var(--dim) }
+  .pgbar .dot3 { width:10px; height:10px; border-radius:50% }
+  .live { margin-left:auto; color:#f87171; font-weight:700; letter-spacing:.08em; font-size:11px }
+  .live i { display:inline-block; width:7px; height:7px; border-radius:50%; background:#f87171;
+    margin-right:5px; animation:blink 1.1s infinite }
+  @keyframes blink { 50% { opacity:.25 } }
+  .pgmain { display:grid; grid-template-columns: 172px 1fr 208px; min-height:308px }
+  .pipe { border-right:1px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:7px }
+  .pstage { border:1px solid var(--line); border-radius:9px; padding:6px 9px; font-size:11.5px;
+    color:var(--faint); background:var(--panel); transition:all .3s }
+  .pstage b { display:block; font-size:12px; color:var(--dim) }
+  .pstage.on { border-color:var(--teal); color:var(--teal); box-shadow:0 0 12px rgba(45,212,191,.25) }
+  .pstage.on b { color:var(--ink) }
+  .pstage.done { border-color:var(--green); color:var(--green) }
+  .blockchip { font-size:11px; border:1px dashed var(--amber); color:var(--amber); border-radius:99px;
+    padding:3px 9px; text-align:center; opacity:0; transition:opacity .4s }
+  .blockchip.show { opacity:1 }
+  .stage3d { position:relative }
+  .stage3d svg { width:100%; height:100%; display:block }
+  .feed { border-left:1px solid var(--line); padding:10px; font-size:11.5px; overflow:hidden }
+  .feed h4 { margin:0 0 7px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint) }
+  .feed li { list-style:none; margin:0 0 6px; color:var(--dim); opacity:0; transform:translateX(8px);
+    transition:all .45s; line-height:1.45 }
+  .feed li.show { opacity:1; transform:none }
+  .feed ul { margin:0; padding:0 }
+  .feed .ok { color:var(--green) } .feed .warn { color:var(--amber) } .feed .jev { color:var(--violet) }
+  .gatebox { margin-top:9px; border:1px solid var(--amber); border-radius:9px; padding:7px 9px;
+    font-size:11.5px; color:var(--amber); opacity:0; transition:all .4s }
+  .gatebox.show { opacity:1 } .gatebox.merged { border-color:var(--green); color:var(--green) }
+  @media (max-width:760px){ .pgmain{grid-template-columns:1fr} .pipe,.feed{border:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="site" id="sitenav"></nav>
+
+<div class="kicker">Phase D — Experience · Sector 13</div>
+<h1>Playground frontend — the live theater</h1>
+<p class="sub">A standalone web app (React + <b>Reagraph</b>, chosen 2026-10-21) that makes the whole
+system <i>watchable</i>: as blocks roll through the miniloop, the ontology graph grows on screen in 3D —
+decisions stream in, proposed changes glow as ghosts, merges land with a pulse. Transparency as a
+feature: for the user's attention, and for our debugging. Host-agnostic by design — a VS Code webview
+wrapper can adopt the same component later.</p>
+
+<h2>Demo — one block, watched live</h2>
+<div class="demo">
+  <div class="pg">
+    <div class="pgbar">
+      <span class="dot3" style="background:#f87171"></span><span class="dot3" style="background:#fbbf24"></span><span class="dot3" style="background:#34d399"></span>
+      <span>playground · novel-ontology-pi — Index · Chapter 1</span>
+      <span class="live"><i></i>LIVE</span>
+    </div>
+    <div class="pgmain">
+      <div class="pipe">
+        <div class="blockchip" id="blk">▣ block b0008 · 第一章</div>
+        <div class="pstage" id="ps0"><b>Sectioning</b>deterministic · code</div>
+        <div class="pstage" id="ps1"><b>Miniloop patches</b>Jev decisions</div>
+        <div class="pstage" id="ps2"><b>Extraction</b>DeepSeek · per scene</div>
+        <div class="pstage" id="ps3"><b>ChangeSet</b>proposals accumulate</div>
+        <div class="pstage" id="ps4"><b>Merge gate</b>main agent reviews</div>
+      </div>
+      <div class="stage3d">
+        <svg id="pgSvg" viewBox="0 0 460 308" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="feed">
+        <h4>Decision stream</h4>
+        <ul id="feedList">
+          <li data-t="600">▸ b0008 sectioned — 42 sentences</li>
+          <li data-t="1500"><span class="jev">jev</span> dialogue · s0017 → Kuroko · p .93</li>
+          <li data-t="2300"><span class="jev">jev</span> present · 美琴 .99 / 黒子 .97</li>
+          <li data-t="3100"><span class="warn">new name</span> 「初春饰利」 — zero-context extract ✓</li>
+          <li data-t="3900">extraction · 2 events, 1 scene @ 咖啡店</li>
+          <li data-t="4700"><span class="warn">ChangeSet cs_b0008</span> — 7 proposals</li>
+          <li data-t="6300"><span class="ok">approved → merged</span> · graph rebuilt</li>
+          <li data-t="7100">fork preview — branch from ev_003 …</li>
+        </ul>
+        <div class="gatebox" id="gateBox">⧗ GATE · 7 proposals pending review</div>
+      </div>
+    </div>
+  </div>
+  <div class="caption" id="pgCap">A block enters the pipeline — every stage lights up as it works.</div>
+</div>
+<p style="color:var(--dim);font-size:13.5px">What you're watching: the block flows down the pipeline
+strip; Jev's verdicts stream into the feed; the new character and events appear in the graph as
+<i>amber ghosts</i> (proposed, not yet real); the gate badge counts the pending ChangeSet; on approval
+the ghosts solidify with a pulse — then the camera dives to the timeline and a parallel-universe
+branch forks off. That loop, running on real data, is the product's front door.</p>
+
+<h2>Design details</h2>
+<ul class="tight" style="font-size:14px">
+  <li><b>Stack:</b> Vite + React + TypeScript; <b>Reagraph</b> (Apache-2.0) for the graph stage — clustering, expand/collapse (chapter → scene → event zoom), node badges for pending proposals; a <b>React Flow</b> strip for the pipeline itself. Both views share selection state: click a block in the strip, the graph flies to what it produced.</li>
+  <li><b>Event feed is the contract:</b> the CLI emits a typed event stream (block started · sentence sectioned · patch verdict · proposal added · changeset pending · merged · graph rebuilt). The frontend is a pure consumer — first transport is the CLI writing an append-only <code>events.jsonl</code> per novel plus a tiny local SSE server (<code>novel watch</code>); the component never touches the DB directly.</li>
+  <li><b>Four views, one state:</b> <i>Live Theater</i> (this demo), <i>Ontology Explorer</i> (free 3D browse, search, focus), <i>Timeline Lanes</i> (canon + branches as lanes, scrub/play through event order — DIY over chronologicalOrder), <i>Gate Queue</i> (ChangeSets as cards with diff-style review, approve/hold from the UI).</li>
+  <li><b>Ghosts before facts:</b> proposals render as translucent amber ghosts in the graph <i>before</i> approval and solidify on merge — the user literally sees the difference between what the miniloop believes and what is canon.</li>
+  <li><b>Replay for debugging:</b> the event stream is recorded, so any ingestion run can be replayed step-by-step later (the Agent Flow pattern) — a bug report becomes a rewatchable session.</li>
+  <li><b>Host-agnostic:</b> no filesystem or VS Code APIs inside the component. A later VS Code extension is a thin shell (webview + the same event feed); the standalone app remains the public face.</li>
+</ul>
+
+<h2>Implementation mapping</h2>
+<table>
+  <tr><th>Piece</th><th>Lands as</th></tr>
+  <tr><td>Playground app</td><td><code>apps/playground/</code> — Vite + React + TS, Reagraph + React Flow deps</td></tr>
+  <tr><td>Event emission</td><td>CLI: block processor + miniloop + changeset store emit <code>PlaygroundEvent</code> records (<code>src/events/</code>)</td></tr>
+  <tr><td>Live transport</td><td><code>novel watch &lt;novel-dir&gt;</code> — tails events.jsonl, serves SSE + the built frontend</td></tr>
+  <tr><td>Graph data</td><td>CLI query endpoints over LadybugStore/retrieval (initial snapshot + deltas)</td></tr>
+  <tr><td>Gate actions</td><td>UI calls the same changeset approve/hold path as the CLI — one gate, two doors</td></tr>
+</table>
+
+<h2>Open questions — this sector only</h2>
+<ul class="qlist">
+    <li>Transport final form.<span>SSE from a local server (current plan) vs. WebSocket vs. plain file-tail polling — SSE is simplest and one-directional like the data; bidirectional needs (gate clicks) are ordinary HTTP posts. Confirm SSE?</span></li>
+    <li>Session recording format.<span>Events already persist as JSONL — how much UI state (camera, selections) joins the recording for faithful replay?</span></li>
+    <li>Scale guardrails.<span>Reagraph is comfortable in the low thousands of nodes; at whole-novel scale the explorer needs cluster-first rendering (chapters as supernodes) — the default view decision: always clustered, expand on demand?</span></li>
+    <li>2D fallback.<span>Reagraph offers 2D layouts in the same component — ship a 2D/3D toggle from day one for weaker GPUs?</span></li>
+</ul>
+
+<div class="pager" id="pager"></div>
+<footer>novel-ontology-pi · System 1 design · 13 Playground frontend</footer>
+</div>
+<script src="assets/sector.js"></script>
+<script>
+(function () {
+  const svg = document.getElementById('pgSvg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const W = 460, H = 308, CX = 230, CY = 150, F = 300;
+  // node: id, label, kind, x,y,z, ghost(0 canon,1 proposed,2 branch)
+  const N = [
+    ['mikoto','御坂美琴','char',-70,-52,-30,0], ['kuroko','白井黒子','char',58,-64,26,0],
+    ['cafe','咖啡店','loc',6,44,-66,0], ['sc1','场景 · 咖啡店','scene',-96,26,44,0],
+    ['ev1','ev_001 相遇','event',-128,96,-12,0], ['ev2','ev_002 约定','event',-34,110,20,0],
+    ['ev3','ev_003 终端','event',64,104,-26,0], ['ev4','ev_004 傍晚','event',150,92,14,0],
+    ['uiharu','初春饰利','char',-8,-104,10,1], ['ev5','ev_005 归还终端','event',-58,58,64,1],
+    ['ev6','ev_006 新的约定','event',104,44,58,1],
+    ['bev','ev_003′ 分叉','event',64,168,-10,2], ['bev2','ev_004′ 另一结局','event',158,160,22,2],
+  ];
+  const E = [
+    ['mikoto','sc1'],['kuroko','sc1'],['sc1','cafe'],['mikoto','ev1'],['kuroko','ev1'],
+    ['ev1','ev2'],['ev2','ev3'],['ev3','ev4'],['kuroko','ev3'],
+    ['uiharu','ev5'],['mikoto','ev5'],['ev5','ev6'],['uiharu','sc1'],
+    ['ev3','bev'],['bev','bev2'],
+  ];
+  const COL = { char:'#a78bfa', loc:'#7dd3fc', scene:'#94a3b8', event:'#2dd4bf' };
+  const nodes = {}, edges = [];
+  const gE = document.createElementNS(NS, 'g'), gN = document.createElementNS(NS, 'g');
+  svg.appendChild(gE); svg.appendChild(gN);
+  const ripple = document.createElementNS(NS, 'circle');
+  ripple.setAttribute('fill', 'none'); ripple.setAttribute('stroke', '#34d399'); ripple.setAttribute('stroke-width', '2');
+  ripple.setAttribute('opacity', '0'); gN.appendChild(ripple);
+  for (const [a, b] of E) {
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('stroke', '#3b4a6b'); l.setAttribute('stroke-width', '1.1');
+    gE.appendChild(l); edges.push({ a, b, l });
+  }
+  for (const [id, label, kind, x, y, z, ghost] of N) {
+    const g = document.createElementNS(NS, 'g');
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('fill', COL[kind]); c.setAttribute('stroke', '#0a0e16'); c.setAttribute('stroke-width', '1.5');
+    const t = document.createElementNS(NS, 'text');
+    t.textContent = label; t.setAttribute('fill', '#c7d0e0'); t.setAttribute('font-size', '9.5');
+    t.setAttribute('text-anchor', 'middle');
+    g.appendChild(c); g.appendChild(t); gN.appendChild(g);
+    nodes[id] = { id, label, kind, x, y, z, ghost, g, c, t, born: 0 };
+  }
+  const cap = document.getElementById('pgCap');
+  const CAPS = [
+    [0, 'A block enters the pipeline — every stage lights up as it works.'],
+    [2600, 'Jev verdicts stream in; a NEW name surfaces — extracted by a zero-context call.'],
+    [4600, 'Proposals gather as amber ghosts — visible, but not yet canon. The gate badge counts them.'],
+    [6100, 'The main agent approves → ghosts solidify, the graph rebuilds. Canon grows by one block.'],
+    [7000, 'Camera dives to the timeline — and a parallel universe forks from ev_003.'],
+    [10200, 'Fork complete. The loop restarts with the next block.'],
+  ];
+  let start = performance.now();
+  function frame(now) {
+    const t = (now - start) % 12000;
+    const ang = t * 0.00016;
+    const zoomT = t > 7000 && t < 10200 ? Math.min(1, (t - 7000) / 900) : (t >= 10200 ? Math.max(0, 1 - (t - 10200) / 700) : 0);
+    const zoom = 1 + 0.5 * zoomT, oy = -34 * zoomT;
+    // pipeline + feed states
+    const stage = t < 1200 ? 0 : t < 3400 ? 1 : t < 4300 ? 2 : t < 5400 ? 3 : t < 6100 ? 4 : 5;
+    for (let i = 0; i < 5; i++) {
+      const el = document.getElementById('ps' + i);
+      el.className = 'pstage' + (i < stage || stage === 5 ? ' done' : i === stage ? ' on' : '');
+    }
+    document.getElementById('blk').className = 'blockchip' + (t > 250 ? ' show' : '');
+    document.querySelectorAll('#feedList li').forEach(li => {
+      li.classList.toggle('show', t >= +li.dataset.t);
+    });
+    const gate = document.getElementById('gateBox');
+    const merged = t >= 6100;
+    gate.className = 'gatebox' + (t >= 4700 ? ' show' : '') + (merged ? ' merged' : '');
+    gate.textContent = merged ? '✓ GATE · cs_b0008 merged — canon updated' : '⧗ GATE · 7 proposals pending review';
+    let capText = CAPS[0][1];
+    for (const [ct, txt] of CAPS) if (t >= ct) capText = txt;
+    if (cap.textContent !== capText) cap.textContent = capText;
+    // graph
+    const pos = {};
+    for (const id in nodes) {
+      const n = nodes[id];
+      const visible = n.ghost === 0 || (n.ghost === 1 && t >= 3300) || (n.ghost === 2 && t >= 7400);
+      const solid = n.ghost === 0 || (n.ghost === 1 && merged) || n.ghost === 2;
+      const xr = n.x * Math.cos(ang) - n.z * Math.sin(ang);
+      const zr = n.x * Math.sin(ang) + n.z * Math.cos(ang);
+      const s = F / (F + zr);
+      const px = CX + xr * s * zoom, py = CY + (n.y * s + oy) * (0.9 + 0.1 * s);
+      pos[id] = { px, py, s, visible };
+      n.g.setAttribute('opacity', visible ? (solid ? 0.55 + 0.45 * s : 0.45) : 0);
+      n.c.setAttribute('cx', px); n.c.setAttribute('cy', py);
+      n.c.setAttribute('r', (n.kind === 'char' ? 11 : n.kind === 'event' ? 8 : 9) * s * (0.8 + 0.2 * zoom));
+      n.c.setAttribute('fill', solid ? COL[n.kind] : '#fbbf24');
+      n.c.setAttribute('stroke-dasharray', solid ? 'none' : '3 2');
+      n.c.setAttribute('stroke', solid ? '#0a0e16' : '#fbbf24');
+      n.t.setAttribute('x', px); n.t.setAttribute('y', py + 24 * s);
+      n.t.setAttribute('opacity', s > 0.82 && visible ? 1 : 0);
+    }
+    for (const e of edges) {
+      const a = pos[e.a], b = pos[e.b];
+      const bothGhost = nodes[e.a].ghost > 0 || nodes[e.b].ghost > 0;
+      e.l.setAttribute('x1', a.px); e.l.setAttribute('y1', a.py);
+      e.l.setAttribute('x2', b.px); e.l.setAttribute('y2', b.py);
+      e.l.setAttribute('opacity', a.visible && b.visible ? (bothGhost && !merged && nodes[e.a].ghost !== 2 ? 0.35 : 0.7) : 0);
+      e.l.setAttribute('stroke', nodes[e.a].ghost === 2 || nodes[e.b].ghost === 2 ? '#a78bfa' : '#3b4a6b');
+      e.l.setAttribute('stroke-dasharray', bothGhost && !merged ? '4 3' : 'none');
+    }
+    // merge ripple
+    const rt = (t - 6100) / 900;
+    if (rt >= 0 && rt <= 1) {
+      ripple.setAttribute('cx', pos['uiharu'].px); ripple.setAttribute('cy', pos['uiharu'].py);
+      ripple.setAttribute('r', 8 + rt * 55); ripple.setAttribute('opacity', String(0.8 * (1 - rt)));
+    } else ripple.setAttribute('opacity', '0');
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
