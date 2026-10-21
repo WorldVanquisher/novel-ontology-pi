@@ -9,6 +9,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { loadConfig } from "./config.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
 import { initWorkspace } from "./workspace/init.js";
@@ -67,6 +68,11 @@ async function main(): Promise<void> {
       throw new Error("Usage: novel init <path> [--pretty]");
     }
     out(await initWorkspace(sub), pretty);
+    return;
+  }
+
+  if (cmd === "config") {
+    out(loadConfig(), pretty);
     return;
   }
 
