@@ -118,8 +118,13 @@ export class LadybugStore implements OntologyStore {
   }
 
   async close(): Promise<void> {
-    const c = this.conn as unknown as { close?: () => Promise<void> };
-    if (c.close) await c.close();
+    try {
+      await this.conn.close();
+    } finally {
+      // Each store owns its Database. Closing only the connection leaves old
+      // instances alive when graph build opens this path again.
+      await this.db.close();
+    }
   }
 
   // ---------------- writes (approved merges + graph build only) ----------
