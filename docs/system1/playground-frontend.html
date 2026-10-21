@@ -37,6 +37,17 @@
   .gatebox { margin-top:9px; border:1px solid var(--amber); border-radius:9px; padding:7px 9px;
     font-size:11.5px; color:var(--amber); opacity:0; transition:all .4s }
   .gatebox.show { opacity:1 } .gatebox.merged { border-color:var(--green); color:var(--green) }
+  #uniChip { position:absolute; top:44px; right:12px; z-index:5; background:#171e2e; color:var(--dim);
+    border:1px solid var(--line); border-radius:99px; padding:5px 12px; font-size:12.5px;
+    display:flex; gap:7px; align-items:center; transition:all .4s }
+  #uniChip #uniBadge { background:#26304a; color:var(--dim); border-radius:99px; padding:0 7px;
+    font-size:11.5px; font-weight:700 }
+  #uniChip.shine { color:#0b0e14; background:var(--amber); border-color:var(--amber); font-weight:700;
+    animation:chipGlow 1s ease-in-out infinite }
+  #uniChip.shine #uniBadge { background:#0b0e14; color:var(--amber) }
+  #uniChip.caught { background:var(--green); border-color:var(--green); color:#0b0e14; font-weight:700; animation:none }
+  #uniChip.caught #uniBadge { background:#0b0e14; color:var(--green) }
+  @keyframes chipGlow { 0%,100% { box-shadow:0 0 4px rgba(251,191,36,.5) } 50% { box-shadow:0 0 22px rgba(251,191,36,.95) } }
   @media (max-width:760px){ .pgmain{grid-template-columns:1fr} .pipe,.feed{border:0} }
 </style>
 </head>
@@ -116,8 +127,32 @@ scene cloud around an inner time axis, every edge arrowed in the direction time 
 semantic, not just optical: past a threshold the summary node <i>becomes</i> its contents
 (Reagraph expand/collapse over the containment relations in the graph).</p>
 
+<h2>Demo 3 — one world: the agent knits elsewhere</h2>
+<div class="demo">
+  <div class="pg" style="position:relative">
+    <div class="pgbar">
+      <span class="dot3" style="background:#f87171"></span><span class="dot3" style="background:#fbbf24"></span><span class="dot3" style="background:#34d399"></span>
+      <span>timeline · one graph, many cameras</span>
+      <span class="live" style="color:var(--teal)"><i style="background:var(--teal)"></i>UNIFIED VIEW</span>
+    </div>
+    <div id="uniChip">✦ Agent activity <span id="uniBadge">0</span></div>
+    <svg id="uniSvg" viewBox="0 0 920 320" style="width:100%;display:block" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="caption" id="uniCap">You are deep inside a canon event, reading its internal timeline. Your camera is yours — it does not move.</div>
+</div>
+<p style="color:var(--dim);font-size:13.5px">The principle this demo enforces: <b>live activity is not a
+separate screen.</b> There is one world — the ontology graph — and every view is a camera over it.
+The user may be parked inside any timeline at any zoom while System 1 and the agent knit somewhere
+else entirely (another lane, another chapter, inside another big event): the work appears there, in
+place, as ghosts — never by stealing the camera. What the user missed accumulates in the
+<b>activity tab</b>: quiet while nothing matters, <i>shining</i> when there is something worth seeing.
+Tapping it runs a <b>guided flight</b> — across lanes and zoom levels — to exactly where the knitting
+is, arriving as the merge lands. One source of truth, many cameras, zero fights.</p>
+
 <h2>Design details</h2>
 <ul class="tight" style="font-size:14px">
+  <li><b>One graph, many cameras (core principle):</b> live activity and timeline browsing are the SAME surface. Views are cameras/filters over the single ontology graph (the source of truth) — never separate data. The agent's knitting renders in place wherever it belongs (any lane, any chapter, inside any big event) as ghosts, and never moves the user's camera. A follow-agent mode exists, but it is a toggle, off by default.</li>
+  <li><b>The shining activity tab:</b> agent/System-1 activity elsewhere accumulates as notifications with a location attached (lane, big event, zoom level). The tab glows when something noteworthy lands — new knitting site, a ChangeSet reaching the gate, a merge. Tapping an entry runs a <i>guided flight</i>: the camera travels across lanes and semantic zoom levels to the exact site, expanding containers on the way in. Notification policy is a design knob: merges and gate arrivals always shine; raw verdicts batch silently.</li>
   <li><b>Stack:</b> Vite + React + TypeScript; <b>Reagraph</b> (Apache-2.0) for the graph stage — clustering, expand/collapse (chapter → scene → event zoom), node badges for pending proposals; a <b>React Flow</b> strip for the pipeline itself. Both views share selection state: click a block in the strip, the graph flies to what it produced.</li>
   <li><b>Event feed is the contract:</b> the CLI emits a typed event stream (block started · sentence sectioned · patch verdict · proposal added · changeset pending · merged · graph rebuilt). The frontend is a pure consumer — first transport is the CLI writing an append-only <code>events.jsonl</code> per novel plus a tiny local SSE server (<code>novel watch</code>); the component never touches the DB directly.</li>
   <li><b>Four views, one state:</b> <i>Live Theater</i> (this demo), <i>Ontology Explorer</i> (free 3D browse, search, focus), <i>Timeline Lanes</i> (canon + branches as lanes, scrub/play through event order — DIY over chronologicalOrder), <i>Gate Queue</i> (ChangeSets as cards with diff-style review, approve/hold from the UI).</li>
@@ -143,6 +178,7 @@ semantic, not just optical: past a threshold the summary node <i>becomes</i> its
     <li>Session recording format.<span>Events already persist as JSONL — how much UI state (camera, selections) joins the recording for faithful replay?</span></li>
     <li>Scale guardrails.<span>Reagraph is comfortable in the low thousands of nodes; at whole-novel scale the explorer needs cluster-first rendering (chapters as supernodes) — the default view decision: always clustered, expand on demand?</span></li>
     <li>2D fallback.<span>Reagraph offers 2D layouts in the same component — ship a 2D/3D toggle from day one for weaker GPUs?</span></li>
+    <li>Notification policy.<span>What earns a shine vs. a silent feed entry — merges and gate arrivals always; escalations (low-confidence, held ChangeSets) immediately? Multiple simultaneous knitting sites: one tab entry per site, or a single rolled-up "3 sites active"?</span></li>
 </ul>
 
 <div class="pager" id="pager"></div>
@@ -424,6 +460,118 @@ semantic, not just optical: past a threshold the summary node <i>becomes</i> its
     });
     let capText = CAPS[0][1];
     for (const [ct, txt2] of CAPS) if (t >= ct) capText = txt2;
+    if (cap.textContent !== capText) cap.textContent = capText;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<script>
+(function () {
+  const svg = document.getElementById('uniSvg');
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(x, y, str, size, fill, parent, anchor) {
+    const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor || 'middle',
+      'paint-order': 'stroke', stroke: '#0a0e16', 'stroke-width': 3 }, parent);
+    t.textContent = str;
+    return t;
+  }
+  const world = el('g', {}, svg);
+  // lanes
+  el('rect', { x: 16, y: 30, width: 888, height: 118, rx: 14, fill: 'rgba(38,48,74,.22)', stroke: '#26304a' }, world);
+  txt(34, 54, 'CANON LANE', 11.5, '#9aa7bd', world, 'start');
+  el('rect', { x: 16, y: 176, width: 888, height: 118, rx: 14, fill: 'rgba(167,139,250,.06)', stroke: '#3d3358' }, world);
+  txt(34, 200, 'BRANCH LANE · what-if', 11.5, '#a78bfa', world, 'start');
+  el('line', { x1: 30, y1: 96, x2: 890, y2: 96, stroke: '#3b4a6b', 'stroke-width': 2 }, world);
+  el('line', { x1: 30, y1: 242, x2: 890, y2: 242, stroke: '#3d3358', 'stroke-width': 2 }, world);
+  // canon big events
+  const CANON = [[170, '相遇'], [330, '约定'], [520, '傍晚']];
+  for (const [x, name] of CANON) {
+    el('circle', { cx: x, cy: 96, r: 22, fill: '#12333a', stroke: '#2dd4bf', 'stroke-width': 2 }, world);
+    txt(x, 101, name, 12.5, '#e8ecf4', world);
+  }
+  // user's focus: parked inside '约定' — interior micro-dots
+  const focus = el('g', {}, world);
+  el('rect', { x: 268, y: 52, width: 128, height: 88, rx: 12, fill: 'none', stroke: '#2dd4bf', 'stroke-width': 1.6, 'stroke-dasharray': '5 4' }, focus);
+  txt(332, 44, 'you are viewing · 约定 internal timeline', 11.5, '#2dd4bf', focus);
+  [[292, 116], [318, 108], [344, 118], [368, 106]].forEach(([x, y]) => el('circle', { cx: x, cy: y, r: 4.5, fill: '#94a3b8' }, focus));
+  el('path', { d: 'M292,116 L318,108 L344,118 L368,106', fill: 'none', stroke: '#5f6d88', 'stroke-width': 1.2 }, focus);
+  // branch big events
+  const BR = [[210, '终端未丢'], [470, '寻回★'], [730, '芭菲']];
+  for (const [x, name] of BR) {
+    el('circle', { cx: x, cy: 242, r: 22, fill: '#241b3e', stroke: '#a78bfa', 'stroke-width': 2 }, world);
+    txt(x, 247, name, 11.5, '#e8ecf4', world);
+  }
+  txt(470, 200, 'agent knitting here ⤵', 12, '#fbbf24', world);
+  // halo at knitting site
+  const halo = el('circle', { cx: 470, cy: 242, r: 30, fill: 'none', stroke: '#fbbf24', 'stroke-width': 2, opacity: 0 }, world);
+  // ghosts spawning around the branch site
+  const GHOSTS = [[428, 210], [512, 208], [436, 276], [508, 274]];
+  const ghostEls = GHOSTS.map(([x, y]) => {
+    const c = el('circle', { cx: x, cy: y, r: 10, fill: '#fbbf24', stroke: '#fbbf24', 'stroke-dasharray': '3 2', opacity: 0 }, world);
+    return c;
+  });
+  const ripple = el('circle', { cx: 470, cy: 242, r: 10, fill: 'none', stroke: '#34d399', 'stroke-width': 2.5, opacity: 0 }, world);
+  // arrival outline
+  const arrive = el('rect', { x: 404, y: 176, width: 132, height: 118, rx: 12, fill: 'none', stroke: '#34d399', 'stroke-width': 1.8, 'stroke-dasharray': '5 4', opacity: 0 }, world);
+
+  const chip = document.getElementById('uniChip');
+  const badge = document.getElementById('uniBadge');
+  const cap = document.getElementById('uniCap');
+  const CAPS = [
+    [0, 'You are deep inside a canon event, reading its internal timeline. Your camera is yours — it does not move.'],
+    [1100, 'Meanwhile, in the branch lane, System 1 starts knitting a new block: ghost proposals appear there — in place, not on your screen-space.'],
+    [3000, 'The activity tab begins to SHINE. Nothing interrupted you; the news simply accumulated, with a location attached.'],
+    [5200, 'You tap the shining tab — a guided flight carries your camera across lanes to the knitting site…'],
+    [7300, '…arriving exactly as the merge lands: ghosts solidify into branch canon. One graph, one truth — many cameras, zero fights.'],
+    [10400, 'The loop resets: the tab rests, the ghosts clear, the agent moves on to the next block.'],
+  ];
+  const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  let start = performance.now();
+  function frame(now) {
+    const t = (now - start) % 12500;
+    // ghosts spawn 1.2 / 2.3 / 3.4 / 4.3
+    const spawnTimes = [1200, 2300, 3400, 4300];
+    let count = 0;
+    ghostEls.forEach((c, i) => {
+      const born = t >= spawnTimes[i];
+      if (born) count++;
+      const solid = t >= 7300 && t < 10400;
+      c.setAttribute('opacity', born ? (solid ? 0.95 : 0.55) : 0);
+      c.setAttribute('fill', solid ? '#a78bfa' : '#fbbf24');
+      c.setAttribute('stroke-dasharray', solid ? 'none' : '3 2');
+    });
+    // halo pulses while knitting
+    const knitting = t >= 1100 && t < 7300;
+    const hp = (t % 1400) / 1400;
+    halo.setAttribute('r', 28 + hp * 16);
+    halo.setAttribute('opacity', knitting ? String(0.75 * (1 - hp)) : 0);
+    // chip state
+    const caught = t >= 7300;
+    chip.className = caught ? 'caught' : (count > 0 ? 'shine' : '');
+    chip.childNodes[0].textContent = caught ? '✓ Caught up ' : '✦ Agent activity ';
+    badge.textContent = caught ? '0' : String(count);
+    // flight: 5.2 -> 7.3 zoom onto branch site; hold; release 10.4 -> 11.9
+    let z = 0;
+    if (t >= 5200 && t < 7300) z = ease((t - 5200) / 2100);
+    else if (t >= 7300 && t < 10400) z = 1;
+    else if (t >= 10400) z = 1 - ease((t - 10400) / 1500);
+    const s = 1 + 0.85 * z;
+    world.setAttribute('transform', `translate(460 160) scale(${s}) translate(${-470} ${-242})`);
+    focus.setAttribute('opacity', String(1 - z));
+    arrive.setAttribute('opacity', String(z > 0.85 ? (t < 10400 ? 1 : 1 - z) : 0));
+    // merge ripple
+    const rt = (t - 7300) / 1000;
+    if (rt >= 0 && rt <= 1) { ripple.setAttribute('r', 12 + rt * 46); ripple.setAttribute('opacity', String(0.85 * (1 - rt))); }
+    else ripple.setAttribute('opacity', 0);
+    let capText = CAPS[0][1];
+    for (const [ct, tx] of CAPS) if (t >= ct) capText = tx;
     if (cap.textContent !== capText) cap.textContent = capText;
     requestAnimationFrame(frame);
   }
