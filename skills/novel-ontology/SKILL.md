@@ -67,9 +67,14 @@ say which timeline you are on.
 
 ## Workflow 5 — Share an ontology
 
-`novel bundle export` produces the portable bundle folder (JSONL +
-manifest). Anyone with the bundle + the CLI can rebuild the graph
-locally with `novel graph build` — no server, no Docker.
+`novel bundle export <novel-dir> <out-dir>` produces the portable bundle
+folder (JSONL + manifest, byte-for-byte; the derived `graph.lbug` and
+any secret-shaped files like `.env` are excluded and reported).
+`novel bundle import <bundle-dir> <target-dir>` validates the bundle
+first (manifest, JSON, every JSONL line) and refuses to overwrite an
+existing target — a failed import leaves nothing behind. Anyone with
+the bundle + the CLI can rebuild the graph locally with
+`novel graph build <target-dir>/ontology` — no server, no Docker.
 
 ## Hard rules
 

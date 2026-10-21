@@ -52,6 +52,34 @@ API, `TYPESAFE_API_KEY` + pinned `JEV_MODEL` for the decision model.
 Keys are user inputs — provide them via environment/secure entry, never
 commit them.
 
+## Sharing a novel: bundle export / import
+
+The JSONL bundle is the source of truth, so sharing a novel = moving the
+bundle folder. The graph database is *not* part of it — it is rebuilt
+locally from the bundle.
+
+```bash
+node dist/src/cli.js bundle export <novel-dir> <out-dir>     # writes a NEW dir
+node dist/src/cli.js bundle import <bundle-dir> <target-dir> # writes a NEW dir
+node dist/src/cli.js graph build <target-dir>/ontology       # rebuild the graph
+```
+
+- **Export includes** the whole bundle, byte-for-byte: `source/`,
+  `ontology/manifest.json` + all JSONL (entities, relations, events,
+  scenes, timelines, branches), `branches/<id>/` deltas and snapshots,
+  and the `changesets/` audit trail. IDs, source evidence, timelines and
+  fields written by newer versions are preserved exactly.
+- **Export excludes** the derived Ladybug graph (`graph.lbug*` —
+  rebuild it with `graph build`) and secret-shaped files (`.env*`,
+  private keys, credentials), which are listed in the command output.
+- **Import validates before writing anything**: manifest shape and
+  schema version, every JSON file parses, every JSONL line parses
+  (errors name the file and line). The copy is staged next to the
+  target and moved into place only when complete, so a failed import
+  leaves no partial folder behind.
+- **Nothing is ever overwritten**: if the target directory already
+  exists, both commands stop with an error and leave it untouched.
+
 ## Status
 
 v0.1 skeleton (2026-10-21): founding design, Skill, CLI skeleton with
