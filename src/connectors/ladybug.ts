@@ -1,4 +1,5 @@
 import { Database, Connection } from "@ladybugdb/core";
+import type { QueryResult } from "@ladybugdb/core";
 import type { OntologyStore } from "../ontology/store.js";
 import { LADYBUG_DDL } from "../ontology/schema.js";
 import { BundleStore } from "./bundle.js";
@@ -84,17 +85,22 @@ export class LadybugStore implements OntologyStore {
   /** Apply schema v1 DDL (idempotent). Called by graph build / first write. */
   async initSchema(): Promise<void> {
     if (this.schemaReady) return;
-    for (const ddl of LADYBUG_DDL) await this.conn.query(ddl);
+    for (const ddl of LADYBUG_DDL) await this.run(ddl);
     this.schemaReady = true;
   }
 
   /** Run Cypher; params go through a prepared statement, never string glue. */
   async run(cypher: string, params?: Record<string, unknown>): Promise<Row[]> {
     const collect = async (
-      res: { getAll: () => Promise<unknown> } | { getAll: () => Promise<unknown> }[],
+      res: QueryResult | QueryResult[],
     ): Promise<Row[]> => {
-      const single = Array.isArray(res) ? res[0] : res;
-      return (await single.getAll()) as Row[];
+      const results = Array.isArray(res) ? res : [res];
+      try {
+        return (await results[0].getAll()) as Row[];
+      } finally {
+        // Results retain native connection resources even after getAll().
+        for (const result of results) result.close();
+      }
     };
     if (!params) return collect(await this.conn.query(cypher));
     const prep = await this.conn.prepare(cypher);
