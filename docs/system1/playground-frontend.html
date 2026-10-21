@@ -48,6 +48,15 @@
   #uniChip.caught { background:var(--green); border-color:var(--green); color:#0b0e14; font-weight:700; animation:none }
   #uniChip.caught #uniBadge { background:#0b0e14; color:var(--green) }
   @keyframes chipGlow { 0%,100% { box-shadow:0 0 4px rgba(251,191,36,.5) } 50% { box-shadow:0 0 22px rgba(251,191,36,.95) } }
+  .uniwrap { display:grid; grid-template-columns: 178px 1fr }
+  .rail { border-right:1px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:7px }
+  .railfeed { margin-top:6px; font-size:11.5px }
+  .railfeed h4 { margin:0 0 7px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint) }
+  .railfeed ul { margin:0; padding:0 }
+  .railfeed li { list-style:none; margin:0 0 6px; color:var(--dim); opacity:0; transform:translateX(8px); transition:all .45s; line-height:1.45 }
+  .railfeed li.show { opacity:1; transform:none }
+  .railfeed .ok { color:var(--green) } .railfeed .warn { color:var(--amber) } .railfeed .jev { color:var(--violet) }
+  @media (max-width:760px){ .uniwrap{grid-template-columns:1fr} .rail{border:0} }
   @media (max-width:760px){ .pgmain{grid-template-columns:1fr} .pipe,.feed{border:0} }
 </style>
 </head>
@@ -63,91 +72,53 @@ decisions stream in, proposed changes glow as ghosts, merges land with a pulse. 
 feature: for the user's attention, and for our debugging. Host-agnostic by design — a VS Code webview
 wrapper can adopt the same component later.</p>
 
-<h2>Demo — one block, watched live</h2>
+<h2>The demo — one world, watched live</h2>
 <div class="demo">
-  <div class="pg">
+  <div class="pg" style="position:relative">
     <div class="pgbar">
       <span class="dot3" style="background:#f87171"></span><span class="dot3" style="background:#fbbf24"></span><span class="dot3" style="background:#34d399"></span>
-      <span>playground · novel-ontology-pi — Index · Chapter 1</span>
+      <span id="uniCrumb">playground · timeline — chapter range</span>
       <span class="live"><i></i>LIVE</span>
     </div>
-    <div class="pgmain">
-      <div class="pipe">
-        <div class="blockchip" id="blk">▣ block b0008 · 第一章</div>
+    <div id="uniChip">✦ Agent activity <span id="uniBadge">0</span></div>
+    <div class="uniwrap">
+      <div class="rail">
+        <div class="blockchip" id="blk">▣ block b0011 · branch ch.2</div>
         <div class="pstage" id="ps0"><b>Sectioning</b>deterministic · code</div>
         <div class="pstage" id="ps1"><b>Miniloop patches</b>Jev decisions</div>
         <div class="pstage" id="ps2"><b>Extraction</b>DeepSeek · per scene</div>
         <div class="pstage" id="ps3"><b>ChangeSet</b>proposals accumulate</div>
         <div class="pstage" id="ps4"><b>Merge gate</b>main agent reviews</div>
+        <div class="railfeed">
+          <h4>Decision stream</h4>
+          <ul id="feedList">
+            <li data-t="400">▸ b0011 sectioned — 38 sentences</li>
+            <li data-t="1700"><span class="jev">jev</span> present · 黒子 .96</li>
+            <li data-t="3100"><span class="jev">jev</span> dialogue · 4 turns attributed</li>
+            <li data-t="4600"><span class="warn">cs_b0011</span> — 6 proposals (branch)</li>
+            <li data-t="13300"><span class="warn">⚖ cs_b0011 at the GATE</span></li>
+            <li data-t="18000"><span class="ok">approved → merged</span> · graph rebuilt</li>
+          </ul>
+          <div class="gatebox" id="gateBox">⧗ GATE · 6 proposals pending</div>
+        </div>
       </div>
       <div class="stage3d">
-        <svg id="pgSvg" viewBox="0 0 460 308" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
-      <div class="feed">
-        <h4>Decision stream</h4>
-        <ul id="feedList">
-          <li data-t="600">▸ b0008 sectioned — 42 sentences</li>
-          <li data-t="1500"><span class="jev">jev</span> dialogue · s0017 → Kuroko · p .93</li>
-          <li data-t="2300"><span class="jev">jev</span> present · 美琴 .99 / 黒子 .97</li>
-          <li data-t="3100"><span class="warn">new name</span> 「初春饰利」 — zero-context extract ✓</li>
-          <li data-t="3900">extraction · 2 events, 1 scene @ 咖啡店</li>
-          <li data-t="4700"><span class="warn">ChangeSet cs_b0008</span> — 7 proposals</li>
-          <li data-t="6300"><span class="ok">approved → merged</span> · graph rebuilt</li>
-          <li data-t="7100">fork preview — branch from ev_003 …</li>
-        </ul>
-        <div class="gatebox" id="gateBox">⧗ GATE · 7 proposals pending review</div>
+        <svg id="uniSvg" viewBox="0 0 700 400" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
     </div>
   </div>
-  <div class="caption" id="pgCap">A block enters the pipeline — every stage lights up as it works.</div>
+  <div class="caption" id="uniCap">One world: the timeline at chapter range. Down in the branch lane, System 1 is already knitting — ghosts appearing in place.</div>
 </div>
-<p style="color:var(--dim);font-size:13.5px">What you're watching: the block flows down the pipeline
-strip; Jev's verdicts stream into the feed; the new character and events appear in the graph as
-<i>amber ghosts</i> (proposed, not yet real); the gate badge counts the pending ChangeSet; on approval
-the ghosts solidify with a pulse — then the camera dives to the timeline and a parallel-universe
-branch forks off. That loop, running on real data, is the product's front door.</p>
-
-<h2>Demo 2 — timeline zoom, two levels</h2>
-<div class="demo">
-  <div class="pg">
-    <div class="pgbar">
-      <span class="dot3" style="background:#f87171"></span><span class="dot3" style="background:#fbbf24"></span><span class="dot3" style="background:#34d399"></span>
-      <span id="zoomCrumb">timeline · 章范围总览 — big events</span>
-      <span class="live" style="color:var(--teal)"><i style="background:var(--teal)"></i>ZOOM DEMO</span>
-    </div>
-    <svg id="zoomSvg" viewBox="0 0 920 340" style="width:100%;display:block" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-  <div class="caption" id="zoomCap">Level 1 — the chapter range: one node per BIG event (an event summary spanning part of a chapter), time flowing left → right.</div>
-</div>
-<p style="color:var(--dim);font-size:13.5px">The timeline has <b>two zoom levels</b>. <b>Level 1 (per
-chapter range):</b> each node is a <i>big event</i> — a summarized story beat that can span many scenes,
-strung along the canon timeline. <b>Level 2 (inside a big event):</b> clicking one dives into its
-<i>internal</i> timeline — the small scenes, dialogue turns and micro-events it contains, drawn as a
-scene cloud around an inner time axis, every edge arrowed in the direction time flows. Zooming is
-semantic, not just optical: past a threshold the summary node <i>becomes</i> its contents
-(Reagraph expand/collapse over the containment relations in the graph).</p>
-
-<h2>Demo 3 — one world: the agent knits elsewhere</h2>
-<div class="demo">
-  <div class="pg" style="position:relative">
-    <div class="pgbar">
-      <span class="dot3" style="background:#f87171"></span><span class="dot3" style="background:#fbbf24"></span><span class="dot3" style="background:#34d399"></span>
-      <span>timeline · one graph, many cameras</span>
-      <span class="live" style="color:var(--teal)"><i style="background:var(--teal)"></i>UNIFIED VIEW</span>
-    </div>
-    <div id="uniChip">✦ Agent activity <span id="uniBadge">0</span></div>
-    <svg id="uniSvg" viewBox="0 0 920 320" style="width:100%;display:block" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-  <div class="caption" id="uniCap">You are deep inside a canon event, reading its internal timeline. Your camera is yours — it does not move.</div>
-</div>
-<p style="color:var(--dim);font-size:13.5px">The principle this demo enforces: <b>live activity is not a
-separate screen.</b> There is one world — the ontology graph — and every view is a camera over it.
-The user may be parked inside any timeline at any zoom while System 1 and the agent knit somewhere
-else entirely (another lane, another chapter, inside another big event): the work appears there, in
-place, as ghosts — never by stealing the camera. What the user missed accumulates in the
-<b>activity tab</b>: quiet while nothing matters, <i>shining</i> when there is something worth seeing.
-Tapping it runs a <b>guided flight</b> — across lanes and zoom levels — to exactly where the knitting
-is, arriving as the merge lands. One source of truth, many cameras, zero fights.</p>
+<p style="color:var(--dim);font-size:13.5px">This single loop is the whole product idea. <b>One
+world:</b> the ontology graph is the only source of truth; the timeline, the 3D interior and the
+live feed are cameras over it, never separate data. <b>Two zoom levels:</b> chapter-range
+<i>big events</i> on the outside; click one and it opens into its <i>3D interior</i> — character,
+location, scene, dialogue and event nodes laid out in 3D roughly in chronological order, every link
+single-directional along an explicit time-flow axis. A story told in two places at once shows
+<b>two parallel chains</b> (here: the café and the street patrol, interleaved by one phone call).
+<b>Live, without fighting:</b> while you are inside, the agent keeps knitting in another lane —
+ghosts appear there, in place, and the <b>activity tab</b> quietly shines. Tap it and a guided
+flight carries your camera out, across lanes, to the knitting site, arriving as the merge lands.</p>
 
 <h2>Design details</h2>
 <ul class="tight" style="font-size:14px">
@@ -156,7 +127,7 @@ is, arriving as the merge lands. One source of truth, many cameras, zero fights.
   <li><b>Stack:</b> Vite + React + TypeScript; <b>Reagraph</b> (Apache-2.0) for the graph stage — clustering, expand/collapse (chapter → scene → event zoom), node badges for pending proposals; a <b>React Flow</b> strip for the pipeline itself. Both views share selection state: click a block in the strip, the graph flies to what it produced.</li>
   <li><b>Event feed is the contract:</b> the CLI emits a typed event stream (block started · sentence sectioned · patch verdict · proposal added · changeset pending · merged · graph rebuilt). The frontend is a pure consumer — first transport is the CLI writing an append-only <code>events.jsonl</code> per novel plus a tiny local SSE server (<code>novel watch</code>); the component never touches the DB directly.</li>
   <li><b>Four views, one state:</b> <i>Live Theater</i> (this demo), <i>Ontology Explorer</i> (free 3D browse, search, focus), <i>Timeline Lanes</i> (canon + branches as lanes, scrub/play through event order — DIY over chronologicalOrder), <i>Gate Queue</i> (ChangeSets as cards with diff-style review, approve/hold from the UI).</li>
-  <li><b>Timeline zoom is semantic, two levels (demo 2):</b> level 1 shows <i>big events</i> — summarized beats spanning chapter ranges; clicking one expands it into its <i>internal timeline</i> (level 2): the scenes, dialogue turns and micro-events it contains, in a scene cloud around an inner time axis with directed flow. Data-wise this is containment: a big event groups scenes/events; zoom = Reagraph expand/collapse over those relations, not a camera trick alone.</li>
+  <li><b>Timeline zoom is semantic, two levels:</b> level 1 shows <i>big events</i> — summarized beats spanning chapter ranges; clicking one expands it into its <i>3D interior</i> (level 2): characters, locations, scenes, dialogue turns and micro-events laid out in 3D roughly in chronological order along a time-flow axis, single-directional links only. A story narrated in parallel places shows <i>parallel chains</i> — one per location — interleaved only where the narration actually crosses (a phone call, a meeting). Data-wise this is containment: a big event groups scenes/events; zoom = Reagraph expand/collapse over those relations, not a camera trick alone.</li>
   <li><b>Ghosts before facts:</b> proposals render as translucent amber ghosts in the graph <i>before</i> approval and solidify on merge — the user literally sees the difference between what the miniloop believes and what is canon.</li>
   <li><b>Replay for debugging:</b> the event stream is recorded, so any ingestion run can be replayed step-by-step later (the Agent Flow pattern) — a bug report becomes a rewatchable session.</li>
   <li><b>Host-agnostic:</b> no filesystem or VS Code APIs inside the component. A later VS Code extension is a thin shell (webview + the same event feed); the standalone app remains the public face.</li>
@@ -187,287 +158,6 @@ is, arriving as the merge lands. One source of truth, many cameras, zero fights.
 <script src="assets/sector.js"></script>
 <script>
 (function () {
-  const svg = document.getElementById('pgSvg');
-  const NS = 'http://www.w3.org/2000/svg';
-  const W = 460, H = 308, CX = 230, CY = 150, F = 300;
-  // node: id, label, kind, x,y,z, ghost(0 canon,1 proposed,2 branch)
-  const N = [
-    ['mikoto','御坂美琴','char',-70,-52,-30,0], ['kuroko','白井黒子','char',58,-64,26,0],
-    ['cafe','咖啡店','loc',6,44,-66,0], ['sc1','场景 · 咖啡店','scene',-96,26,44,0],
-    ['ev1','ev_001 相遇','event',-128,96,-12,0], ['ev2','ev_002 约定','event',-34,110,20,0],
-    ['ev3','ev_003 终端','event',64,104,-26,0], ['ev4','ev_004 傍晚','event',150,92,14,0],
-    ['uiharu','初春饰利','char',-8,-104,10,1], ['ev5','ev_005 归还终端','event',-58,58,64,1],
-    ['ev6','ev_006 新的约定','event',104,44,58,1],
-    ['bev','ev_003′ 分叉','event',64,168,-10,2], ['bev2','ev_004′ 另一结局','event',158,160,22,2],
-  ];
-  const E = [
-    ['mikoto','sc1'],['kuroko','sc1'],['sc1','cafe'],['mikoto','ev1'],['kuroko','ev1'],
-    ['ev1','ev2'],['ev2','ev3'],['ev3','ev4'],['kuroko','ev3'],
-    ['uiharu','ev5'],['mikoto','ev5'],['ev5','ev6'],['uiharu','sc1'],
-    ['ev3','bev'],['bev','bev2'],
-  ];
-  const COL = { char:'#a78bfa', loc:'#7dd3fc', scene:'#94a3b8', event:'#2dd4bf' };
-  const nodes = {}, edges = [];
-  const gE = document.createElementNS(NS, 'g'), gN = document.createElementNS(NS, 'g');
-  svg.appendChild(gE); svg.appendChild(gN);
-  const ripple = document.createElementNS(NS, 'circle');
-  ripple.setAttribute('fill', 'none'); ripple.setAttribute('stroke', '#34d399'); ripple.setAttribute('stroke-width', '2');
-  ripple.setAttribute('opacity', '0'); gN.appendChild(ripple);
-  for (const [a, b] of E) {
-    const l = document.createElementNS(NS, 'line');
-    l.setAttribute('stroke', '#3b4a6b'); l.setAttribute('stroke-width', '1.1');
-    gE.appendChild(l); edges.push({ a, b, l });
-  }
-  for (const [id, label, kind, x, y, z, ghost] of N) {
-    const g = document.createElementNS(NS, 'g');
-    const c = document.createElementNS(NS, 'circle');
-    c.setAttribute('fill', COL[kind]); c.setAttribute('stroke', '#0a0e16'); c.setAttribute('stroke-width', '1.5');
-    const t = document.createElementNS(NS, 'text');
-    t.textContent = label; t.setAttribute('fill', '#c7d0e0'); t.setAttribute('font-size', '9.5');
-    t.setAttribute('text-anchor', 'middle');
-    g.appendChild(c); g.appendChild(t); gN.appendChild(g);
-    nodes[id] = { id, label, kind, x, y, z, ghost, g, c, t, born: 0 };
-  }
-  const cap = document.getElementById('pgCap');
-  const CAPS = [
-    [0, 'A block enters the pipeline — every stage lights up as it works.'],
-    [2600, 'Jev verdicts stream in; a NEW name surfaces — extracted by a zero-context call.'],
-    [4600, 'Proposals gather as amber ghosts — visible, but not yet canon. The gate badge counts them.'],
-    [6100, 'The main agent approves → ghosts solidify, the graph rebuilds. Canon grows by one block.'],
-    [7000, 'Camera dives to the timeline — and a parallel universe forks from ev_003.'],
-    [10200, 'Fork complete. The loop restarts with the next block.'],
-  ];
-  let start = performance.now();
-  function frame(now) {
-    const t = (now - start) % 12000;
-    const ang = t * 0.00016;
-    const zoomT = t > 7000 && t < 10200 ? Math.min(1, (t - 7000) / 900) : (t >= 10200 ? Math.max(0, 1 - (t - 10200) / 700) : 0);
-    const zoom = 1 + 0.5 * zoomT, oy = -34 * zoomT;
-    // pipeline + feed states
-    const stage = t < 1200 ? 0 : t < 3400 ? 1 : t < 4300 ? 2 : t < 5400 ? 3 : t < 6100 ? 4 : 5;
-    for (let i = 0; i < 5; i++) {
-      const el = document.getElementById('ps' + i);
-      el.className = 'pstage' + (i < stage || stage === 5 ? ' done' : i === stage ? ' on' : '');
-    }
-    document.getElementById('blk').className = 'blockchip' + (t > 250 ? ' show' : '');
-    document.querySelectorAll('#feedList li').forEach(li => {
-      li.classList.toggle('show', t >= +li.dataset.t);
-    });
-    const gate = document.getElementById('gateBox');
-    const merged = t >= 6100;
-    gate.className = 'gatebox' + (t >= 4700 ? ' show' : '') + (merged ? ' merged' : '');
-    gate.textContent = merged ? '✓ GATE · cs_b0008 merged — canon updated' : '⧗ GATE · 7 proposals pending review';
-    let capText = CAPS[0][1];
-    for (const [ct, txt] of CAPS) if (t >= ct) capText = txt;
-    if (cap.textContent !== capText) cap.textContent = capText;
-    // graph
-    const pos = {};
-    for (const id in nodes) {
-      const n = nodes[id];
-      const visible = n.ghost === 0 || (n.ghost === 1 && t >= 3300) || (n.ghost === 2 && t >= 7400);
-      const solid = n.ghost === 0 || (n.ghost === 1 && merged) || n.ghost === 2;
-      const xr = n.x * Math.cos(ang) - n.z * Math.sin(ang);
-      const zr = n.x * Math.sin(ang) + n.z * Math.cos(ang);
-      const s = F / (F + zr);
-      const px = CX + xr * s * zoom, py = CY + (n.y * s + oy) * (0.9 + 0.1 * s);
-      pos[id] = { px, py, s, visible };
-      n.g.setAttribute('opacity', visible ? (solid ? 0.55 + 0.45 * s : 0.45) : 0);
-      n.c.setAttribute('cx', px); n.c.setAttribute('cy', py);
-      n.c.setAttribute('r', (n.kind === 'char' ? 11 : n.kind === 'event' ? 8 : 9) * s * (0.8 + 0.2 * zoom));
-      n.c.setAttribute('fill', solid ? COL[n.kind] : '#fbbf24');
-      n.c.setAttribute('stroke-dasharray', solid ? 'none' : '3 2');
-      n.c.setAttribute('stroke', solid ? '#0a0e16' : '#fbbf24');
-      n.t.setAttribute('x', px); n.t.setAttribute('y', py + 24 * s);
-      n.t.setAttribute('opacity', s > 0.82 && visible ? 1 : 0);
-    }
-    for (const e of edges) {
-      const a = pos[e.a], b = pos[e.b];
-      const bothGhost = nodes[e.a].ghost > 0 || nodes[e.b].ghost > 0;
-      e.l.setAttribute('x1', a.px); e.l.setAttribute('y1', a.py);
-      e.l.setAttribute('x2', b.px); e.l.setAttribute('y2', b.py);
-      e.l.setAttribute('opacity', a.visible && b.visible ? (bothGhost && !merged && nodes[e.a].ghost !== 2 ? 0.35 : 0.7) : 0);
-      e.l.setAttribute('stroke', nodes[e.a].ghost === 2 || nodes[e.b].ghost === 2 ? '#a78bfa' : '#3b4a6b');
-      e.l.setAttribute('stroke-dasharray', bothGhost && !merged ? '4 3' : 'none');
-    }
-    // merge ripple
-    const rt = (t - 6100) / 900;
-    if (rt >= 0 && rt <= 1) {
-      ripple.setAttribute('cx', pos['uiharu'].px); ripple.setAttribute('cy', pos['uiharu'].py);
-      ripple.setAttribute('r', 8 + rt * 55); ripple.setAttribute('opacity', String(0.8 * (1 - rt)));
-    } else ripple.setAttribute('opacity', '0');
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
-<script>
-(function () {
-  const svg = document.getElementById('zoomSvg');
-  const NS = 'http://www.w3.org/2000/svg';
-  function el(tag, attrs, parent) {
-    const e = document.createElementNS(NS, tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    if (parent) parent.appendChild(e);
-    return e;
-  }
-  function txt(x, y, str, size, fill, parent, anchor) {
-    const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor || 'middle',
-      'paint-order': 'stroke', stroke: '#0a0e16', 'stroke-width': 3 }, parent);
-    t.textContent = str;
-    return t;
-  }
-  const defs = el('defs', {}, svg);
-  const mk = el('marker', { id: 'arr', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, defs);
-  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#5f6d88' }, mk);
-  const mkT = el('marker', { id: 'arrT', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, defs);
-  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#2dd4bf' }, mkT);
-
-  /* ---------------- MACRO: chapter range, big events ---------------- */
-  const macro = el('g', {}, svg);
-  const chapters = [
-    [20, 300, '第一章 · 咖啡店的相遇'], [320, 620, '第二章 · 丢失的终端'], [640, 900, '第三章 · 傍晚的约定'],
-  ];
-  for (const [x1, x2, label] of chapters) {
-    el('rect', { x: x1, y: 58, width: x2 - x1, height: 216, rx: 14, fill: 'rgba(38,48,74,.25)', stroke: '#26304a' }, macro);
-    txt((x1 + x2) / 2, 84, label, 13, '#9aa7bd', macro);
-  }
-  el('line', { x1: 26, y1: 196, x2: 886, y2: 196, stroke: '#3b4a6b', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, macro);
-  txt(880, 292, 'time →', 12, '#5f6d88', macro, 'end');
-  const BIG = [
-    ['b1', 105, '相遇', '美琴与黑子在咖啡店相遇'], ['b2', 228, '约定', '约下次见面'],
-    ['b3', 392, '终端丢失', '初春丢失巡查终端'], ['b4', 522, '归还终端', '在咖啡店寻回终端 ★'],
-    ['b5', 726, '傍晚集合', '三人傍晚集合'], ['b6', 838, '出发', '新的巡查开始'],
-  ];
-  const bigPos = {};
-  BIG.forEach(([id, x, name, sum], i) => {
-    bigPos[id] = { x, y: 196 };
-    if (i > 0) {
-      const px = BIG[i - 1][1];
-      const l = el('line', { x1: px + 34, y1: 196, x2: x - 38, y2: 196, stroke: '#2dd4bf', 'stroke-width': 2,
-        'stroke-dasharray': '6 5', 'marker-end': 'url(#arrT)', opacity: .8 }, macro);
-      l.classList.add('flowline');
-    }
-    const g = el('g', {}, macro);
-    const r = id === 'b4' ? 37 : 30;
-    const c = el('circle', { cx: x, cy: 196, r, fill: '#12333a', stroke: '#2dd4bf', 'stroke-width': id === 'b4' ? 3 : 2 }, g);
-    if (id === 'b4') { c.setAttribute('class', 'targetPulse'); }
-    txt(x, 192, name.slice(0, 2), 15, '#e8ecf4', g);
-    txt(x, 210, name.slice(2), 15, '#e8ecf4', g);
-    txt(x, 196 + r + 18, sum, 11.5, '#9aa7bd', g);
-    if (id === 'b4') txt(x, 196 - r - 12, 'click ⤢', 12, '#fbbf24', g);
-  });
-
-  /* ---------------- MICRO: inside the big event ---------------- */
-  const micro = el('g', { opacity: 0 }, svg);
-  // scene cloud
-  const cloud = el('g', {}, micro);
-  [[300, 168, 205, 88], [430, 150, 190, 96], [545, 172, 180, 82], [410, 196, 230, 76]].forEach(([cx, cy, rx, ry]) => {
-    el('ellipse', { cx, cy, rx, ry, fill: 'rgba(167,139,250,.08)', stroke: 'rgba(167,139,250,.35)', 'stroke-dasharray': '5 4' }, cloud);
-  });
-  txt(415, 82, 'scene cloud · 场景簇 — 咖啡店', 13, '#a78bfa', cloud);
-  // inner time axis
-  el('line', { x1: 80, y1: 252, x2: 846, y2: 252, stroke: '#3b4a6b', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, micro);
-  txt(846, 276, 'internal time →', 12, '#5f6d88', micro, 'end');
-  [210, 400, 590].forEach(x => txt(x, 246, '»', 17, '#2dd4bf', micro));
-  // characters
-  const CH = { uiharu: [168, 118, '初春饰利'], mikoto: [462, 104, '御坂美琴'], kuroko: [742, 118, '白井黒子'] };
-  for (const k in CH) {
-    const [x, y, name] = CH[k];
-    el('circle', { cx: x, cy: y, r: 21, fill: '#2a2145', stroke: '#a78bfa', 'stroke-width': 2 }, micro);
-    txt(x, y + 5, name[0], 15, '#e8ecf4', micro);
-    txt(x, y - 30, name, 12.5, '#c7d0e0', micro);
-  }
-  // dialogue turns (curved edges + quotes)
-  const TURNS = [
-    ['uiharu', 'mikoto', '1', '「终端好像落在店里了…」', 300, 66],
-    ['mikoto', 'uiharu', '2', '「店员捡到一台，是这个？」', 268, 158],
-    ['uiharu', 'mikoto', '3', '「就是它！」', 330, 88],
-    ['kuroko', 'uiharu', '4', '「记得请我们吃芭菲。」', 470, 60],
-  ];
-  const turnEls = TURNS.map(([a, b, n, quote, qx, qy]) => {
-    const [x1, y1] = CH[a], [x2, y2] = CH[b];
-    const mx = (x1 + x2) / 2, my = Math.min(y1, y2) - 34;
-    const p = el('path', { d: `M${x1},${y1} Q${mx},${my} ${x2},${y2}`, fill: 'none', stroke: '#5f6d88',
-      'stroke-width': 1.6, 'marker-end': 'url(#arr)', opacity: .55 }, micro);
-    const badge = el('g', { opacity: .55 }, micro);
-    el('circle', { cx: mx, cy: my + 16, r: 9, fill: '#171e2e', stroke: '#5f6d88' }, badge);
-    txt(mx, my + 20, n, 10.5, '#e8ecf4', badge);
-    const q = txt(qx, qy, quote, 12, '#fbbf24', micro);
-    q.setAttribute('opacity', 0);
-    return { p, badge, q };
-  });
-  // micro timeline nodes
-  const MICRO = [
-    [150, '场景', '柜台前', '#94a3b8'], [330, '事件', '发现终端', '#2dd4bf'], [485, '事件', '确认归属', '#2dd4bf'],
-    [625, '事件', '黑子调侃', '#2dd4bf'], [772, '事件', '芭菲之约', '#2dd4bf'],
-  ];
-  MICRO.forEach(([x, kind, name, col], i) => {
-    if (i > 0) {
-      const l = el('line', { x1: MICRO[i - 1][0] + 27, y1: 252, x2: x - 31, y2: 252, stroke: '#2dd4bf',
-        'stroke-width': 2, 'stroke-dasharray': '6 5', 'marker-end': 'url(#arrT)', opacity: .85 }, micro);
-      l.classList.add('flowline');
-    }
-    el('circle', { cx: x, cy: 252, r: 15, fill: '#0f2a30', stroke: col, 'stroke-width': 2 }, micro);
-    txt(x, 257, kind[0], 11, '#e8ecf4', micro);
-    txt(x, 292, name, 12, '#c7d0e0', micro);
-    txt(x, 224, kind + ' · ' + name, 10.5, '#5f6d88', micro);
-  });
-  // containment links chars -> micro nodes (faint)
-  [[168, 150], [462, 330], [462, 485], [742, 625]].forEach(([x, tx]) => {
-    el('line', { x1: x, y1: 140, x2: tx, y2: 240, stroke: '#a78bfa', 'stroke-width': 1, 'stroke-dasharray': '2 4', opacity: .3 }, micro);
-  });
-
-  const cap = document.getElementById('zoomCap');
-  const crumb = document.getElementById('zoomCrumb');
-  const style = document.createElement('style');
-  style.textContent = '@keyframes tpulse { 0%,100% { stroke-width:3 } 50% { stroke-width:6 } } .targetPulse { animation: tpulse 1.2s infinite } .flowline { animation: dashmove 1.2s linear infinite } @keyframes dashmove { to { stroke-dashoffset: -11 } }';
-  document.head.appendChild(style);
-
-  const CAPS = [
-    [0, 'Level 1 — the chapter range: one node per BIG event (an event summary spanning part of a chapter), time flowing left → right.'],
-    [3600, 'Clicking 归还终端 — semantic zoom: the summary node becomes its contents…'],
-    [5200, 'Level 2 — inside the big event: its internal timeline — scenes, micro-events, and the character dialogue, every arrow pointing the way time flows.'],
-    [9400, 'Zoom back out and the internal timeline collapses into its summary again — one node, holding everything.'],
-  ];
-  const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-  let start = performance.now();
-  function frame(now) {
-    const t = (now - start) % 12000;
-    // zoom factor: 0 = macro, 1 = micro
-    let z;
-    if (t < 3400) z = 0;
-    else if (t < 5000) z = ease((t - 3400) / 1600);
-    else if (t < 9200) z = 1;
-    else if (t < 10800) z = 1 - ease((t - 9200) / 1600);
-    else z = 0;
-    const s = 1 + 2.1 * z;
-    macro.setAttribute('transform', `translate(460 170) scale(${s}) translate(${-bigPos.b4.x} ${-bigPos.b4.y})`);
-    macro.setAttribute('opacity', String(1 - Math.max(0, (z - 0.55) / 0.45)));
-    micro.setAttribute('opacity', String(Math.max(0, (z - 0.5) / 0.5)));
-    micro.setAttribute('transform', `translate(460 170) scale(${0.92 + 0.08 * z}) translate(-460 -170)`);
-    crumb.textContent = z > 0.5
-      ? 'timeline · 第二章 › 大事件「归还终端」› internal timeline'
-      : 'timeline · 章范围总览 — big events';
-    // dialogue turn highlighting
-    const active = z > 0.9 ? Math.floor((t - 5200) / 1000) % 4 : -1;
-    turnEls.forEach((te, i) => {
-      const on = i === active;
-      te.p.setAttribute('stroke', on ? '#fbbf24' : '#5f6d88');
-      te.p.setAttribute('stroke-width', on ? 2.8 : 1.6);
-      te.p.setAttribute('opacity', on ? 1 : 0.55);
-      te.q.setAttribute('opacity', on ? 1 : 0);
-      te.badge.setAttribute('opacity', on ? 1 : 0.55);
-    });
-    let capText = CAPS[0][1];
-    for (const [ct, txt2] of CAPS) if (t >= ct) capText = txt2;
-    if (cap.textContent !== capText) cap.textContent = capText;
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
-<script>
-(function () {
   const svg = document.getElementById('uniSvg');
   const NS = 'http://www.w3.org/2000/svg';
   function el(tag, attrs, parent) {
@@ -482,94 +172,232 @@ is, arriving as the merge lands. One source of truth, many cameras, zero fights.
     t.textContent = str;
     return t;
   }
-  const world = el('g', {}, svg);
-  // lanes
-  el('rect', { x: 16, y: 30, width: 888, height: 118, rx: 14, fill: 'rgba(38,48,74,.22)', stroke: '#26304a' }, world);
-  txt(34, 54, 'CANON LANE', 11.5, '#9aa7bd', world, 'start');
-  el('rect', { x: 16, y: 176, width: 888, height: 118, rx: 14, fill: 'rgba(167,139,250,.06)', stroke: '#3d3358' }, world);
-  txt(34, 200, 'BRANCH LANE · what-if', 11.5, '#a78bfa', world, 'start');
-  el('line', { x1: 30, y1: 96, x2: 890, y2: 96, stroke: '#3b4a6b', 'stroke-width': 2 }, world);
-  el('line', { x1: 30, y1: 242, x2: 890, y2: 242, stroke: '#3d3358', 'stroke-width': 2 }, world);
-  // canon big events
-  const CANON = [[170, '相遇'], [330, '约定'], [520, '傍晚']];
-  for (const [x, name] of CANON) {
-    el('circle', { cx: x, cy: 96, r: 22, fill: '#12333a', stroke: '#2dd4bf', 'stroke-width': 2 }, world);
-    txt(x, 101, name, 12.5, '#e8ecf4', world);
-  }
-  // user's focus: parked inside '约定' — interior micro-dots
-  const focus = el('g', {}, world);
-  el('rect', { x: 268, y: 52, width: 128, height: 88, rx: 12, fill: 'none', stroke: '#2dd4bf', 'stroke-width': 1.6, 'stroke-dasharray': '5 4' }, focus);
-  txt(332, 44, 'you are viewing · 约定 internal timeline', 11.5, '#2dd4bf', focus);
-  [[292, 116], [318, 108], [344, 118], [368, 106]].forEach(([x, y]) => el('circle', { cx: x, cy: y, r: 4.5, fill: '#94a3b8' }, focus));
-  el('path', { d: 'M292,116 L318,108 L344,118 L368,106', fill: 'none', stroke: '#5f6d88', 'stroke-width': 1.2 }, focus);
-  // branch big events
-  const BR = [[210, '终端未丢'], [470, '寻回★'], [730, '芭菲']];
-  for (const [x, name] of BR) {
-    el('circle', { cx: x, cy: 242, r: 22, fill: '#241b3e', stroke: '#a78bfa', 'stroke-width': 2 }, world);
-    txt(x, 247, name, 11.5, '#e8ecf4', world);
-  }
-  txt(470, 200, 'agent knitting here ⤵', 12, '#fbbf24', world);
-  // halo at knitting site
-  const halo = el('circle', { cx: 470, cy: 242, r: 30, fill: 'none', stroke: '#fbbf24', 'stroke-width': 2, opacity: 0 }, world);
-  // ghosts spawning around the branch site
-  const GHOSTS = [[428, 210], [512, 208], [436, 276], [508, 274]];
-  const ghostEls = GHOSTS.map(([x, y]) => {
-    const c = el('circle', { cx: x, cy: y, r: 10, fill: '#fbbf24', stroke: '#fbbf24', 'stroke-dasharray': '3 2', opacity: 0 }, world);
-    return c;
+  const styleEl = document.createElement('style');
+  styleEl.textContent = '@keyframes tpulse { 0%,100% { stroke-width:3 } 50% { stroke-width:6 } } .targetPulse { animation: tpulse 1.2s infinite } .flowline { animation: dashmove 1.2s linear infinite } @keyframes dashmove { to { stroke-dashoffset: -11 } }';
+  document.head.appendChild(styleEl);
+  const defs = el('defs', {}, svg);
+  [['arr', '#5f6d88'], ['arrT', '#2dd4bf'], ['arrV', '#a78bfa']].forEach(([id, col]) => {
+    const mk = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', fill: col }, mk);
   });
-  const ripple = el('circle', { cx: 470, cy: 242, r: 10, fill: 'none', stroke: '#34d399', 'stroke-width': 2.5, opacity: 0 }, world);
-  // arrival outline
-  const arrive = el('rect', { x: 404, y: 176, width: 132, height: 118, rx: 12, fill: 'none', stroke: '#34d399', 'stroke-width': 1.8, 'stroke-dasharray': '5 4', opacity: 0 }, world);
 
+  /* ============ MACRO: timeline lanes, big events ============ */
+  const macro = el('g', {}, svg);
+  el('rect', { x: 14, y: 52, width: 672, height: 128, rx: 14, fill: 'rgba(38,48,74,.22)', stroke: '#26304a' }, macro);
+  txt(26, 74, 'CANON LANE', 11, '#9aa7bd', macro, 'start');
+  el('rect', { x: 14, y: 232, width: 672, height: 128, rx: 14, fill: 'rgba(167,139,250,.06)', stroke: '#3d3358' }, macro);
+  txt(26, 254, 'BRANCH LANE · what-if', 11, '#a78bfa', macro, 'start');
+  el('line', { x1: 24, y1: 122, x2: 672, y2: 122, stroke: '#3b4a6b', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, macro);
+  el('line', { x1: 24, y1: 302, x2: 672, y2: 302, stroke: '#3d3358', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, macro);
+  txt(672, 200, 'time →', 12, '#5f6d88', macro, 'end');
+  txt(180, 66, '第一章', 11.5, '#5f6d88', macro);
+  txt(400, 66, '第二章', 11.5, '#5f6d88', macro);
+  txt(556, 66, '第三章', 11.5, '#5f6d88', macro);
+  const CANON = [[110, '相遇'], [250, '约定'], [400, '归还终端'], [556, '傍晚']];
+  CANON.forEach(([x, name], i) => {
+    if (i > 0) {
+      const l = el('line', { x1: CANON[i - 1][0] + 28, y1: 122, x2: x - 32, y2: 122, stroke: '#2dd4bf', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'marker-end': 'url(#arrT)', opacity: .8 }, macro);
+      l.classList.add('flowline');
+    }
+    const r = name === '归还终端' ? 30 : 25;
+    const c = el('circle', { cx: x, cy: 122, r, fill: '#12333a', stroke: '#2dd4bf', 'stroke-width': name === '归还终端' ? 3 : 2 }, macro);
+    if (name === '归还终端') c.setAttribute('class', 'targetPulse');
+    txt(x, 127, name, name.length > 3 ? 11.5 : 13, '#e8ecf4', macro);
+  });
+  txt(400, 84, 'click ⤢', 12, '#fbbf24', macro);
+  const focus = el('rect', { x: 330, y: 56, width: 140, height: 122, rx: 12, fill: 'none', stroke: '#2dd4bf', 'stroke-width': 1.4, 'stroke-dasharray': '5 4', opacity: .8 }, macro);
+  const BR = [[170, '终端未丢'], [420, '寻回'], [596, '芭菲']];
+  BR.forEach(([x, name], i) => {
+    if (i > 0) {
+      const l = el('line', { x1: BR[i - 1][0] + 26, y1: 302, x2: x - 30, y2: 302, stroke: '#a78bfa', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'marker-end': 'url(#arrV)', opacity: .7 }, macro);
+      l.classList.add('flowline');
+    }
+    el('circle', { cx: x, cy: 302, r: 24, fill: '#241b3e', stroke: '#a78bfa', 'stroke-width': 2 }, macro);
+    txt(x, 307, name, 11.5, '#e8ecf4', macro);
+  });
+  txt(420, 262, 'agent knitting here ⤵', 12, '#fbbf24', macro);
+  const halo = el('circle', { cx: 420, cy: 302, r: 30, fill: 'none', stroke: '#fbbf24', 'stroke-width': 2, opacity: 0 }, macro);
+  const GHOSTS = [[382, 270], [458, 268], [384, 336], [456, 334]];
+  const ghostEls = GHOSTS.map(([x, y]) => el('circle', { cx: x, cy: y, r: 10, fill: '#fbbf24', stroke: '#fbbf24', 'stroke-dasharray': '3 2', opacity: 0 }, macro));
+  const ripple = el('circle', { cx: 420, cy: 302, r: 10, fill: 'none', stroke: '#34d399', 'stroke-width': 2.5, opacity: 0 }, macro);
+  const arrive = el('rect', { x: 348, y: 236, width: 144, height: 122, rx: 12, fill: 'none', stroke: '#34d399', 'stroke-width': 1.8, 'stroke-dasharray': '5 4', opacity: 0 }, macro);
+
+  /* ============ MICRO: 3D interior of 归还终端 — two parallel chains ============ */
+  const micro = el('g', { opacity: 0 }, svg);
+  const COL = { char: '#a78bfa', loc: '#7dd3fc', scene: '#94a3b8', event: '#2dd4bf', dlg: '#fbbf24' };
+  const MN = [
+    // chain A — café
+    ['cafe', '咖啡店', 'loc', -238, -2, -26, ''],
+    ['sceneA', '场景·柜台', 'scene', -192, -60, -12, ''],
+    ['uiharu', '初春饰利', 'char', -150, -132, 2, ''],
+    ['dlgA1', '对话①', 'dlg', -108, -60, 10, '「终端好像落在店里了…」'],
+    ['evA1', '发现终端', 'event', -18, -60, -16, ''],
+    ['mikoto', '御坂美琴', 'char', 28, -134, 8, ''],
+    ['dlgA2', '对话②', 'dlg', 78, -60, 12, '「店员捡到一台，是这个？」'],
+    ['evA2', '确认归属', 'event', 196, -60, -8, ''],
+    // chain B — street
+    ['street', '街道', 'loc', -228, 118, 16, ''],
+    ['sceneB', '场景·巡逻', 'scene', -172, 60, 26, ''],
+    ['kuroko', '白井黒子', 'char', -118, -6, 32, ''],
+    ['dlgB1', '对话③', 'dlg', -58, 60, 40, '「姐姐大人，我这边还没找到」'],
+    ['evB1', '街道巡查', 'event', 122, 60, 18, ''],
+  ];
+  const ME = [
+    ['cafe', 'sceneA', 'thin'], ['sceneA', 'dlgA1', 'flow'], ['dlgA1', 'evA1', 'flow'],
+    ['evA1', 'dlgA2', 'flow'], ['dlgA2', 'evA2', 'flow'],
+    ['street', 'sceneB', 'thin'], ['sceneB', 'dlgB1', 'flow'], ['dlgB1', 'evB1', 'flow'],
+    ['uiharu', 'dlgA1', 'thin'], ['dlgA1', 'mikoto', 'thin'], ['mikoto', 'dlgA2', 'thin'],
+    ['kuroko', 'dlgB1', 'thin'], ['dlgB1', 'mikoto', 'dash'],
+  ];
+  const mNodes = {}, mEdges = [];
+  const gME = el('g', {}, micro), gMN = el('g', {}, micro);
+  for (const [a, b, type] of ME) {
+    const l = el('line', { stroke: type === 'flow' ? '#2dd4bf' : type === 'dash' ? '#a78bfa' : '#5f6d88',
+      'stroke-width': type === 'flow' ? 2 : 1.2, 'stroke-dasharray': type === 'dash' ? '4 3' : 'none',
+      'marker-end': type === 'flow' ? 'url(#arrT)' : type === 'dash' ? 'url(#arrV)' : 'url(#arr)', opacity: 0 }, gME);
+    mEdges.push({ a, b, type, l });
+  }
+  for (const [id, label, kind, x, y, z, quote] of MN) {
+    const g = el('g', {}, gMN);
+    const c = el('circle', { fill: COL[kind], stroke: '#0a0e16', 'stroke-width': 1.5 }, g);
+    const t = txt(0, 0, label, 10.5, '#c7d0e0', g);
+    const q = quote ? txt(0, 0, quote, 11.5, '#fbbf24', g) : null;
+    if (q) q.setAttribute('opacity', 0);
+    mNodes[id] = { id, label, kind, x, y, z, g, c, t, q };
+  }
+  // 3D time axis: a line + chevrons + label, positioned per-frame by projection
+  const axisL = el('line', { stroke: '#3b4a6b', 'stroke-width': 2, 'marker-end': 'url(#arr)' }, gME);
+  const chevs = [-90, 30, 150].map(x => { const c = txt(0, 0, '»', 16, '#2dd4bf', gME); return { x, c }; });
+  const axisLabel = txt(0, 0, 'time flow →', 12.5, '#5f6d88', gME);
+  txt(-238, -196, 'chain A · 咖啡店', 12.5, '#7dd3fc', micro, 'start').setAttribute('class', 'chainLabel');
+  const chainBLabel = txt(-238, 196, 'chain B · 街道（与 A 并行叙述）', 12.5, '#7dd3fc', micro, 'start');
+
+  /* ============ shared UI state ============ */
+  const cap = document.getElementById('uniCap');
+  const crumb = document.getElementById('uniCrumb');
   const chip = document.getElementById('uniChip');
   const badge = document.getElementById('uniBadge');
-  const cap = document.getElementById('uniCap');
   const CAPS = [
-    [0, 'You are deep inside a canon event, reading its internal timeline. Your camera is yours — it does not move.'],
-    [1100, 'Meanwhile, in the branch lane, System 1 starts knitting a new block: ghost proposals appear there — in place, not on your screen-space.'],
-    [3000, 'The activity tab begins to SHINE. Nothing interrupted you; the news simply accumulated, with a location attached.'],
-    [5200, 'You tap the shining tab — a guided flight carries your camera across lanes to the knitting site…'],
-    [7300, '…arriving exactly as the merge lands: ghosts solidify into branch canon. One graph, one truth — many cameras, zero fights.'],
-    [10400, 'The loop resets: the tab rests, the ghosts clear, the agent moves on to the next block.'],
+    [0, 'One world: the timeline at chapter range. Down in the branch lane, System 1 is already knitting — ghosts appearing in place.'],
+    [4700, 'You click 归还终端 — semantic zoom: the summary node dissolves into its 3D interior…'],
+    [6800, 'Inside: TWO locations narrated in parallel — two chains of scenes, dialogue and events, every link one-directional, laid out in chronological order along the time-flow axis.'],
+    [13300, 'The branch ChangeSet reaches the gate — the activity tab shines. Nothing has touched your camera.'],
+    [14800, 'You tap it: a guided flight out of the interior, across lanes, straight to the knitting site…'],
+    [18000, '…arriving as the merge lands: the ghosts solidify into branch canon. One graph, one truth.'],
+    [20500, 'The tab rests. The agent moves on to the next block — and the loop begins again.'],
   ];
   const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  const F = 340, CX = 350, CY = 200;
+  const LOOP = 22000;
   let start = performance.now();
   function frame(now) {
-    const t = (now - start) % 12500;
-    // ghosts spawn 1.2 / 2.3 / 3.4 / 4.3
-    const spawnTimes = [1200, 2300, 3400, 4300];
-    let count = 0;
+    const t = (now - start) % LOOP;
+    /* ---- phases ---- */
+    // zoom into C3: 4.7–6.5 ; micro until 14.8 ; flight: 14.8–17.8 ; arrival hold →19.9 ; release 19.9–21.4
+    let zIn = 0, zFly = 0;
+    if (t >= 4700 && t < 6500) zIn = ease((t - 4700) / 1800);
+    else if (t >= 6500 && t < 14800) zIn = 1;
+    else if (t >= 14800 && t < 16400) zIn = 1 - ease((t - 14800) / 1600);
+    if (t >= 14800 && t < 17800) zFly = ease((t - 14800) / 3000);
+    else if (t >= 17800 && t < 19900) zFly = 1;
+    else if (t >= 19900) zFly = 1 - ease((t - 19900) / 1500);
+    const microO = Math.max(0, (zIn - 0.45) / 0.55) * (t < 15200 ? 1 : Math.max(0, 1 - (t - 15200) / 700));
+    // macro transform: zoom to C3 during zIn, then focus glides C3 -> W2 with zFly
+    const fx = 400 + (420 - 400) * zFly, fy = 122 + (302 - 122) * zFly;
+    const sMac = 1 + 1.7 * zIn * (1 - zFly) + 0.8 * zFly;
+    macro.setAttribute('transform', `translate(350 200) scale(${sMac}) translate(${-fx} ${-fy})`);
+    let macO = 1 - Math.max(0, (zIn - 0.55) / 0.45);
+    if (t >= 14800) macO = Math.min(1, (t - 14800) / 900);
+    macro.setAttribute('opacity', String(Math.max(0, Math.min(1, macO))));
+    micro.setAttribute('opacity', String(microO));
+    focus.setAttribute('opacity', String(0.8 * (1 - zIn)));
+    arrive.setAttribute('opacity', String(zFly > 0.9 && t < 19900 ? 1 : 0));
+    crumb.textContent = microO > 0.5
+      ? 'playground · 第二章 › 大事件「归还终端」› 3D interior'
+      : (zFly > 0.5 ? 'playground · guided flight → branch knitting site' : 'playground · timeline — chapter range');
+    /* ---- knitting: ghosts, halo, chip ---- */
+    const spawnTimes = [1100, 2100, 3100, 4000];
+    let gcount = 0;
     ghostEls.forEach((c, i) => {
-      const born = t >= spawnTimes[i];
-      if (born) count++;
-      const solid = t >= 7300 && t < 10400;
+      const born = t >= spawnTimes[i] && t < 21400;
+      if (born) gcount++;
+      const solid = t >= 18000 && t < 21400;
       c.setAttribute('opacity', born ? (solid ? 0.95 : 0.55) : 0);
       c.setAttribute('fill', solid ? '#a78bfa' : '#fbbf24');
       c.setAttribute('stroke-dasharray', solid ? 'none' : '3 2');
     });
-    // halo pulses while knitting
-    const knitting = t >= 1100 && t < 7300;
     const hp = (t % 1400) / 1400;
-    halo.setAttribute('r', 28 + hp * 16);
-    halo.setAttribute('opacity', knitting ? String(0.75 * (1 - hp)) : 0);
-    // chip state
-    const caught = t >= 7300;
-    chip.className = caught ? 'caught' : (count > 0 ? 'shine' : '');
-    chip.childNodes[0].textContent = caught ? '✓ Caught up ' : '✦ Agent activity ';
-    badge.textContent = caught ? '0' : String(count);
-    // flight: 5.2 -> 7.3 zoom onto branch site; hold; release 10.4 -> 11.9
-    let z = 0;
-    if (t >= 5200 && t < 7300) z = ease((t - 5200) / 2100);
-    else if (t >= 7300 && t < 10400) z = 1;
-    else if (t >= 10400) z = 1 - ease((t - 10400) / 1500);
-    const s = 1 + 0.85 * z;
-    world.setAttribute('transform', `translate(460 160) scale(${s}) translate(${-470} ${-242})`);
-    focus.setAttribute('opacity', String(1 - z));
-    arrive.setAttribute('opacity', String(z > 0.85 ? (t < 10400 ? 1 : 1 - z) : 0));
-    // merge ripple
-    const rt = (t - 7300) / 1000;
-    if (rt >= 0 && rt <= 1) { ripple.setAttribute('r', 12 + rt * 46); ripple.setAttribute('opacity', String(0.85 * (1 - rt))); }
+    halo.setAttribute('r', 28 + hp * 15);
+    halo.setAttribute('opacity', t >= 1100 && t < 18000 ? String(0.7 * (1 - hp)) : 0);
+    const caught = t >= 18000 && t < 21400;
+    chip.className = caught ? 'caught' : (gcount > 0 ? 'shine' : '');
+    chip.childNodes[0].textContent = caught ? '✓ Caught up ' : (t >= 13300 && t < 14800 ? '⚖ Gate + Agent activity ' : '✦ Agent activity ');
+    badge.textContent = caught ? '0' : String(gcount);
+    const rt = (t - 18000) / 1000;
+    if (rt >= 0 && rt <= 1) { ripple.setAttribute('r', 12 + rt * 44); ripple.setAttribute('opacity', String(0.85 * (1 - rt))); }
     else ripple.setAttribute('opacity', 0);
+    /* ---- rail: pipeline, feed, gate ---- */
+    const stage = t < 1300 ? 0 : t < 3500 ? 1 : t < 4400 ? 2 : t < 5600 ? 3 : t < 13300 ? 4 : 5;
+    for (let i = 0; i < 5; i++) {
+      const e2 = document.getElementById('ps' + i);
+      e2.className = 'pstage' + (i < stage || stage === 5 ? ' done' : i === stage ? ' on' : '');
+    }
+    document.getElementById('blk').className = 'blockchip' + (t > 250 ? ' show' : '');
+    document.querySelectorAll('#feedList li').forEach(li => li.classList.toggle('show', t >= +li.dataset.t && t < 21400));
+    const gate = document.getElementById('gateBox');
+    gate.className = 'gatebox' + (t >= 4600 && t < 21400 ? ' show' : '') + (caught ? ' merged' : '');
+    gate.textContent = caught ? '✓ GATE · cs_b0011 merged' : '⧗ GATE · 6 proposals pending';
+    /* ---- micro 3D render ---- */
+    if (microO > 0.01) {
+      const mt = Math.max(0, t - 6500);
+      const ang = Math.sin(now * 0.00022) * 0.17;
+      const pos = {};
+      const ordered = Object.values(mNodes).slice();
+      for (const n of ordered) {
+        const xr = n.x * Math.cos(ang) - n.z * Math.sin(ang);
+        const zr = n.x * Math.sin(ang) + n.z * Math.cos(ang);
+        const s = F / (F + zr);
+        pos[n.id] = { px: CX + xr * s, py: CY + n.y * s, s, zr };
+      }
+      // time axis in 3D
+      const ax = [-272, 272].map(x => {
+        const xr = x * Math.cos(ang), zr = x * Math.sin(ang), s = F / (F + zr);
+        return { px: CX + xr * s, py: CY + 158 * s, s };
+      });
+      axisL.setAttribute('x1', ax[0].px); axisL.setAttribute('y1', ax[0].py);
+      axisL.setAttribute('x2', ax[1].px); axisL.setAttribute('y2', ax[1].py);
+      for (const cv of chevs) {
+        const xr = cv.x * Math.cos(ang), zr = cv.x * Math.sin(ang), s = F / (F + zr);
+        cv.c.setAttribute('x', CX + xr * s); cv.c.setAttribute('y', CY + 152 * s);
+      }
+      axisLabel.setAttribute('x', ax[1].px); axisLabel.setAttribute('y', ax[1].py + 22);
+      // progressive reveal of the time-flow chain edges
+      const flowIdx = { 'sceneA>dlgA1': 0, 'dlgA1>evA1': 1, 'evA1>dlgA2': 2, 'dlgA2>evA2': 3, 'sceneB>dlgB1': 0.5, 'dlgB1>evB1': 2.5 };
+      for (const e of mEdges) {
+        const a = pos[e.a], b = pos[e.b];
+        let vis = 1;
+        if (e.type === 'flow') vis = mt > 500 + (flowIdx[e.a + '>' + e.b] || 0) * 620 ? 1 : 0;
+        e.l.setAttribute('x1', a.px); e.l.setAttribute('y1', a.py);
+        e.l.setAttribute('x2', b.px); e.l.setAttribute('y2', b.py);
+        e.l.setAttribute('opacity', String(vis * (e.type === 'flow' ? 0.9 : e.type === 'dash' ? 0.55 : 0.4)));
+      }
+      // active dialogue turn cycles
+      const dlgIds = ['dlgA1', 'dlgB1', 'dlgA2'];
+      const activeDlg = dlgIds[Math.floor(mt / 1200) % 3];
+      for (const n of ordered) {
+        const p = pos[n.id];
+        const r = (n.kind === 'char' ? 12 : n.kind === 'loc' ? 11 : n.kind === 'dlg' ? 9 : 10) * p.s;
+        n.c.setAttribute('cx', p.px); n.c.setAttribute('cy', p.py); n.c.setAttribute('r', r);
+        n.c.setAttribute('stroke', n.id === activeDlg ? '#fbbf24' : '#0a0e16');
+        n.c.setAttribute('stroke-width', n.id === activeDlg ? 3 : 1.5);
+        n.t.setAttribute('x', p.px); n.t.setAttribute('y', p.py + r + 13);
+        n.t.setAttribute('opacity', p.s > 0.8 ? 1 : 0.25);
+        if (n.q) {
+          n.q.setAttribute('x', p.px); n.q.setAttribute('y', p.py - r - 8);
+          n.q.setAttribute('opacity', n.id === activeDlg ? 1 : 0);
+        }
+      }
+    }
     let capText = CAPS[0][1];
     for (const [ct, tx] of CAPS) if (t >= ct) capText = tx;
     if (cap.textContent !== capText) cap.textContent = capText;
@@ -577,6 +405,7 @@ is, arriving as the merge lands. One source of truth, many cameras, zero fights.
   }
   requestAnimationFrame(frame);
 })();
+
 </script>
 </body>
 </html>
