@@ -9,6 +9,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { loadConfig } from "./config.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
 import { buildGraphFromBundle, LadybugStore } from "./connectors/ladybug.js";
@@ -58,6 +59,11 @@ async function main(): Promise<void> {
 
   if (!cmd || cmd === "help" || cmd === "--help") {
     out({ tool: "novel", commands: COMMANDS }, true);
+    return;
+  }
+
+  if (cmd === "config") {
+    out(loadConfig(), pretty);
     return;
   }
 

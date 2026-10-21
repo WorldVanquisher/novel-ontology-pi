@@ -44,6 +44,32 @@ const ev = (id: string, order: number, summary: string, actors: string[]): OntEv
   confidence: 0.9,
 });
 
+test("closed stores release the database across repeated writes and reopens", async () => {
+  const root = await mkdtemp(join(tmpdir(), "novel-reopen-"));
+  const dbPath = join(root, "graph.lbug");
+  // Retain old stores so database lifetime cannot depend on garbage collection.
+  const stores: LadybugStore[] = [];
+  try {
+    for (let i = 0; i < 3; i++) {
+      const writer = new LadybugStore(dbPath);
+      stores.push(writer);
+      await writer.upsertEntity(char(`char_${i}`, `角色 ${i}`));
+      await writer.close();
+      await writer.close();
+
+      const reader = new LadybugStore(dbPath);
+      stores.push(reader);
+      for (let j = 0; j <= i; j++) {
+        assert.equal((await reader.getEntity(`char_${j}`))?.names[0].text, `角色 ${j}`);
+      }
+      await reader.close();
+    }
+  } finally {
+    for (const store of stores) await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("bundle -> ladybug build -> graph-only retrieval + changeset gate flow", async () => {
   const root = await mkdtemp(join(tmpdir(), "novel-test-"));
   const novelDir = join(root, "novel");
