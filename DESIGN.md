@@ -206,9 +206,11 @@ JSON out by default, `--pretty` for humans.
 Progress and decisions are tracked on the dashboard's roadmap page
 (`docs/system1/roadmap.html`) — updated in GitHub every time something
 completes. Decided 2026-10-21: first test novel = re-ingest the legacy
-Index corpus; work LLM for testing = DeepSeek API; embeddings = a
-lightweight local CPU model (~500–1000 dims) with Jev post-selection
-over the top-32 vector candidates; name candidates = hybrid (below).
+Index corpus; work LLM for testing = DeepSeek API; embeddings =
+DEFERRED — graph-first, no embedding model until relational Cypher is
+proven insufficient for a concrete need (fallback design: local CPU
+model ~500–1000 dims + Jev post-selection over the top-32); name
+candidates = hybrid (below).
 
 - **Patch catalog details** — the full candidate list is on the System 1
   page. Which patches are v1, which wait? Current skeleton: scene
@@ -223,8 +225,10 @@ over the top-32 vector candidates; name candidates = hybrid (below).
 - **Confidence thresholds** — starting proposal: accept ≥ 0.85,
   re-ask 0.55–0.85, escalate < 0.55 (per patch). To tune with the test key.
 - **First test novel** — DECIDED: re-ingest the legacy Index corpus.
-- **Embedding provider/model** — DECIDED: lightweight local model on
-  CPU (~500–1000 dims) + Jev post-selection over top-32 candidates.
-  Exact model picked in Phase 1.
+- **Embedding provider/model** — DEFERRED (2026-10-21): graph-first.
+  Phase 1's retrieval layer is pure Cypher (src/ontology/retrieval.ts);
+  an embedding model is added only when a concrete need defeats it.
+  Fallback design: lightweight local CPU model (~500–1000 dims) + Jev
+  post-selection over top-32 candidates.
 - **Jev access route** — he has an API and will provide it later;
   route (direct vs. gateway) settled at handover, via secure entry.

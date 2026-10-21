@@ -42,9 +42,10 @@ ontology main graph. Nothing is merged yet.**
 
 ## Workflow 2 — Answer questions about the novel
 
-Use `novel search <text>` (hybrid FTS + vector seeds) and
-`novel query <cypher>` for traversal: causal chains ("what led to X?"),
-presence ("who was there when...?"), relationships, timelines.
+Use `novel graph query <db> <cypher>` for traversal — causal chains
+("what led to X?"), presence ("who was there when...?"), relationships,
+timelines. Retrieval is graph-first: no vector search unless Cypher has
+been proven insufficient for a concrete need (decision 2026-10-21).
 Cite event IDs and quote the stored evidence when it matters.
 
 ## Workflow 3 — Fork a parallel universe

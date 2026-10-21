@@ -14,19 +14,19 @@ export const SCHEMA_VERSION = 1;
 export const LADYBUG_DDL: string[] = [
   `CREATE NODE TABLE IF NOT EXISTS Character(
      id STRING, canonical_name STRING, importance DOUBLE,
-     embedding FLOAT[], PRIMARY KEY(id))`,
+     PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Location(
-     id STRING, canonical_name STRING, embedding FLOAT[], PRIMARY KEY(id))`,
+     id STRING, canonical_name STRING, PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Organization(
      id STRING, canonical_name STRING, PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Item(
      id STRING, canonical_name STRING, PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Concept(
-     id STRING, canonical_name STRING, embedding FLOAT[], PRIMARY KEY(id))`,
+     id STRING, canonical_name STRING, PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Event(
      id STRING, timeline_id STRING, chapter_index INT64,
      chronological_order INT64, event_type STRING, summary_en STRING,
-     importance DOUBLE, embedding FLOAT[], PRIMARY KEY(id))`,
+     importance DOUBLE, PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Scene(
      id STRING, chapter_index INT64, PRIMARY KEY(id))`,
   `CREATE NODE TABLE IF NOT EXISTS Timeline(
@@ -52,10 +52,19 @@ export const LADYBUG_DDL: string[] = [
   `CREATE REL TABLE IF NOT EXISTS PRECEDES(FROM Event TO Event)`,
 ];
 
-/** Full-text + vector index creation happens in `novel graph reindex`. */
+/**
+ * Retrieval is GRAPH-FIRST (decision, 2026-10-21): no embedding columns,
+ * no vector or FTS indexes in Phase 1. The open experiment of Phase 1 is
+ * whether relational Cypher traversal satisfies the retrieval needs of
+ * extraction and simulation. Only if it provably can't do we add:
+ *   - an embedding column per node table + HNSW index (dimension fixed at
+ *     creation, recorded in the bundle manifest; model change = reindex)
+ *   - an FTS (BM25) index over Event.summary_en / Character.canonical_name
+ * Until then, `searchText` is an honest Cypher CONTAINS scan and
+ * `searchVector` refuses — see connectors/ladybug.ts.
+ */
 export const INDEX_NOTES = [
-  "FTS (BM25) index over Event.summary_en and Character.canonical_name",
-  "Vector index (HNSW, cosine) over Event.embedding / Character.embedding / Scene content",
-  "Embedding dimension is fixed at index creation and recorded in the",
-  "bundle manifest; changing the embedding model requires a reindex.",
+  "Phase 1: none — graph-first by decision (2026-10-21).",
+  "Deferred until Cypher sufficiency is disproven: HNSW vector index,",
+  "BM25 FTS index, embedding columns (see schema.ts header note).",
 ];
