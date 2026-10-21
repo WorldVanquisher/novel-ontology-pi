@@ -33,7 +33,8 @@ two API keys (one work LLM + one decision model), and start.
   language share one paradigm.
 
 📐 **Design:** [DESIGN.md](DESIGN.md) ·
-🧠 **System 1 in detail (animated):** [docs/system1/index.html](docs/system1/index.html)
+🧠 **System 1 in detail (by sector):** [docs/system1/index.html](docs/system1/index.html) ·
+📱 **Single-file viewer** (all sector pages in one self-contained HTML, clickable anywhere): [docs/system1-viewer.html](docs/system1-viewer.html) — regenerate with `node tools/build-viewer.mjs`
 
 ## Quick start
 
