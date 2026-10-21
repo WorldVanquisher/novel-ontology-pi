@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
+import { initWorkspace } from "./workspace/init.js";
 import { buildGraphFromBundle, LadybugStore } from "./connectors/ladybug.js";
 import { BundleStore } from "./connectors/bundle.js";
 import { applyChangeSet } from "./merge/apply.js";
@@ -59,6 +60,14 @@ async function main(): Promise<void> {
 
   if (!cmd || cmd === "help" || cmd === "--help") {
     out({ tool: "novel", commands: COMMANDS }, true);
+    return;
+  }
+
+  if (cmd === "init") {
+    if (!sub?.trim() || sub.startsWith("--") || positional.length !== 2) {
+      throw new Error("Usage: novel init <path> [--pretty]");
+    }
+    out(await initWorkspace(sub), pretty);
     return;
   }
 
