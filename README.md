@@ -43,9 +43,22 @@ npm install
 npm run build
 npm test                                   # mocked Jev — costs nothing
 
+# Create a fresh workspace (no models or API keys needed):
+node dist/src/cli.js init novels/my-novel --pretty
+
 # Deterministic sectioning (works today):
 node dist/src/cli.js section path/to/chapter.txt --pretty
 ```
+
+`init` requires a new target path and creates missing parent directories. It
+refuses existing files, directories (even empty ones), and symlinks. The workspace
+contains `source/`, `ontology/`, `branches/`, and `changesets/`; `ontology/` holds
+the schema-v1 manifest and six empty JSONL bundle files. The manifest uses an
+opaque novel ID, the directory name as its title, unknown source languages
+(`[]`), no embeddings (`null`), and zero processed blocks. The decision-model
+version is recorded from `JEV_MODEL`, defaulting to `jev-1.13.0` as in
+`.env.example`; no model is called. A filesystem failure may leave a partial
+directory; inspect it before removing it or choosing a new path.
 
 Configuration (see `.env.example`): `WORK_LLM_*` for the one work LLM
 API, `TYPESAFE_API_KEY` + pinned `JEV_MODEL` for the decision model.
