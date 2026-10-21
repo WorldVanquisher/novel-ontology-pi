@@ -44,14 +44,20 @@ ontology main graph. Nothing is merged yet.**
 
 Use `novel graph query <db> <cypher>` for traversal — causal chains
 ("what led to X?"), presence ("who was there when...?"), relationships,
-timelines. Retrieval is graph-first: no vector search unless Cypher has
-been proven insufficient for a concrete need (decision 2026-10-21).
+timelines. Against a novel workspace, `novel query <novel-dir> <cypher>`
+runs the same traversals on its built graph, and
+`novel search <novel-dir> <text>` does graph-first text search over
+canonical names and event summaries. Retrieval is graph-first: no vector
+search unless Cypher has been proven insufficient for a concrete need
+(decision 2026-10-21).
 Cite event IDs and quote the stored evidence when it matters.
 
 ## Workflow 3 — Fork a parallel universe
 
-1. `novel timeline show` — browse time points by chapter/event, sorted
-   with importance so the interesting forks surface first.
+1. `novel timeline list <novel-dir>`, then
+   `novel timeline show <novel-dir> <timeline-id>` — browse time points
+   by chapter/event in story order, filtered by importance
+   (`--min-importance N`, default 0.5) so the interesting forks surface.
 2. The **user selects the time point**. Then:
    `novel fork create --at <event-id> --label <name>`.
 3. A branch shares the canon prefix — canon is never mutated. Simulation

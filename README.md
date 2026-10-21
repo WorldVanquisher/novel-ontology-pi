@@ -60,6 +60,27 @@ version is recorded from `JEV_MODEL`, defaulting to `jev-1.13.0` as in
 `.env.example`; no model is called. A filesystem failure may leave a partial
 directory; inspect it before removing it or choosing a new path.
 
+Once a bundle's graph has been built
+(`node dist/src/cli.js graph build novels/my-novel/ontology`), the workspace
+can be browsed without any model calls:
+
+```bash
+node dist/src/cli.js query novels/my-novel "MATCH (c:Character) RETURN c.id AS id" --pretty
+node dist/src/cli.js search novels/my-novel "café" --pretty
+node dist/src/cli.js timeline list novels/my-novel --pretty
+node dist/src/cli.js timeline show novels/my-novel tl_canon --pretty
+```
+
+`query` runs Cypher against the novel's built graph (`ontology/graph.lbug`).
+`search` is the graph-first text search over canonical names and event
+summaries (`--limit N`, default 20). `timeline list` shows the timelines
+with their event counts; `timeline show` lists one timeline's fork-point
+events — importance at least `--min-importance N` (default 0.5), in story
+order. All output is JSON, `--pretty` for humans. A novel whose graph has
+not been built, an unknown timeline ID, and missing or invalid arguments
+are clear errors (JSON on stderr, exit code 1); the read commands never
+create a database as a side effect.
+
 Configuration (see `.env.example`): `WORK_LLM_*` for the one work LLM
 API, `TYPESAFE_API_KEY` + pinned `JEV_MODEL` for the decision model.
 Keys are user inputs — provide them via environment/secure entry, never
