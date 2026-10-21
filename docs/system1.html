@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System 1 — The Autostep Miniloop · novel-ontology-pi</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#121722; --panel2:#171e2e; --line:#26304a;
+    --ink:#e8ecf4; --dim:#9aa7bd; --faint:#5f6d88;
+    --teal:#2dd4bf; --indigo:#818cf8; --amber:#fbbf24; --rose:#fb7185;
+    --green:#4ade80; --violet:#c084fc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC",sans-serif;}
+  .wrap{max-width:1060px;margin:0 auto;padding:32px 20px 80px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:8px}
+  .kicker{color:var(--teal);font-size:12px;letter-spacing:.22em;text-transform:uppercase}
+  h1{font-size:34px;margin:6px 0 4px}
+  h2{font-size:22px;margin:44px 0 6px;border-left:3px solid var(--teal);padding-left:10px}
+  h3{font-size:16px;margin:0 0 4px}
+  p.sub{color:var(--dim);max-width:760px}
+  .badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;
+    border:1px solid var(--line);color:var(--dim);vertical-align:middle}
+  .badge.v1{color:var(--teal);border-color:var(--teal)}
+  .badge.open{color:var(--amber);border-color:var(--amber)}
+  .badge.cand{color:var(--violet);border-color:var(--violet)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;margin:14px 0}
+  .grid{display:grid;gap:14px}
+  .grid.two{grid-template-columns:1fr 1fr}
+  .grid.three{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:820px){.grid.two,.grid.three{grid-template-columns:1fr}}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card p{margin:4px 0;color:var(--dim);font-size:13.5px}
+  .prim{font-family:ui-monospace,Menlo,monospace;font-size:11px;padding:1px 7px;
+    border-radius:6px;background:#0d1220;border:1px solid var(--line)}
+  .prim.noul{color:var(--teal)} .prim.choice{color:var(--indigo)} .prim.score{color:var(--amber)}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--indigo)}
+  .mono{font-family:ui-monospace,Menlo,monospace}
+
+  /* ---------- flow diagram ---------- */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .node{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;position:relative}
+  .node b{display:block;font-size:14px}
+  .node span{color:var(--dim);font-size:12.5px}
+  .arrow{align-self:center;padding:0 8px;color:var(--faint);font-size:20px;position:relative}
+  .arrow::after{content:"";position:absolute;top:50%;left:2px;width:6px;height:6px;
+    border-radius:50%;background:var(--teal);animation:travel 1.6s linear infinite}
+  @keyframes travel{0%{transform:translate(0,-50%);opacity:0}15%{opacity:1}
+    85%{opacity:1}100%{transform:translate(22px,-50%);opacity:0}}
+
+  /* ---------- live demo ---------- */
+  .demo-stage{min-height:340px}
+  .caption{font-size:14px;color:var(--ink);min-height:42px}
+  .caption .stepno{color:var(--teal);font-weight:700;margin-right:8px}
+  .caption .why{color:var(--dim);display:block;font-size:13px}
+  .sentrow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+  .sent{border:1px solid var(--line);background:#0d1220;border-radius:10px;
+    padding:8px 10px;font-size:13.5px;max-width:300px;opacity:.28;transition:all .5s}
+  .sent .sid{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--faint);display:block}
+  .sent .gloss{color:var(--faint);font-size:11.5px;display:block}
+  .sent.on{opacity:1}
+  .sent.dialogue{border-color:var(--indigo);box-shadow:0 0 0 1px var(--indigo) inset}
+  .sent.stitched{border-color:var(--violet);box-shadow:0 0 0 1px var(--violet) inset}
+  .sent.boundary{border-left:4px solid var(--amber)}
+  .sent mark{background:transparent;color:inherit;border-radius:4px;padding:0 2px;transition:all .4s}
+  .sent mark.known{background:rgba(45,212,191,.28)}
+  .sent mark.newname{background:rgba(251,191,36,.30)}
+  .tag{display:none;font-size:10.5px;border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+  .tag.show{display:inline-block}
+  .tag.speaker{background:#232a4a;color:var(--indigo);border:1px solid var(--indigo)}
+  .tag.present{background:#0f2e28;color:var(--teal);border:1px solid var(--teal)}
+  .tag.mentioned{background:#241a10;color:var(--amber);border:1px solid var(--amber)}
+  .splitcols{display:none;gap:12px;margin-top:10px}
+  .splitcols.show{display:flex;flex-wrap:wrap}
+  .splitcol{flex:1;min-width:200px;border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+  .splitcol h4{margin:0 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .chip{display:inline-block;border:1px solid var(--line);border-radius:99px;
+    padding:2px 10px;font-size:12.5px;margin:2px}
+  .chip.new{border-color:var(--amber);color:var(--amber)}
+  .progressdots{display:flex;gap:6px;margin:12px 0 4px}
+  .progressdots i{width:26px;height:4px;border-radius:2px;background:var(--line)}
+  .progressdots i.done{background:var(--teal)}
+  .csbar{display:none;margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .csbar.show{display:block}
+  .csbar .fill{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--indigo));
+    width:0;transition:width 1s}
+  button.replay{background:var(--panel2);color:var(--ink);border:1px solid var(--teal);
+    border-radius:8px;padding:6px 16px;cursor:pointer;font-size:13px}
+  button.replay:hover{background:#1d2740}
+
+  /* ---------- gates ---------- */
+  .gatebar{position:relative;height:34px;border-radius:8px;margin:26px 0 8px;
+    background:linear-gradient(90deg,var(--rose) 0 55%,var(--amber) 55% 85%,var(--green) 85% 100%)}
+  .gatebar .lbl{position:absolute;top:38px;font-size:12px;color:var(--dim);transform:translateX(-50%)}
+  .gatebar .marker{position:absolute;top:-8px;width:3px;height:48px;background:var(--ink);
+    animation:scan 5s ease-in-out infinite}
+  @keyframes scan{0%,100%{left:8%}50%{left:93%}}
+
+  /* ---------- merge gate ---------- */
+  .gate-flow{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
+  .outcome{flex:1;min-width:200px;border-radius:12px;padding:14px 16px;border:1px solid var(--line);
+    background:var(--panel2);opacity:.35;transition:all .5s}
+  .outcome.lit{opacity:1}
+  .outcome.approve.lit{border-color:var(--green);box-shadow:0 0 18px rgba(74,222,128,.15)}
+  .outcome.hold.lit{border-color:var(--amber);box-shadow:0 0 18px rgba(251,191,36,.15)}
+  .outcome.revise.lit{border-color:var(--rose);box-shadow:0 0 18px rgba(251,113,133,.15)}
+  .stamp{display:inline-block;border:2px solid currentColor;border-radius:6px;
+    padding:1px 8px;font-weight:700;letter-spacing:.1em;font-size:12px;transform:rotate(-4deg)}
+  .novel-progress{height:10px;background:#0d1220;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .novel-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--green));
+    transition:width 1.2s}
+  ul.tight{margin:6px 0;padding-left:18px;color:var(--dim);font-size:13.5px}
+  ul.tight li{margin:3px 0}
+  .oq li{margin:9px 0;color:var(--ink)}
+  .oq li span{color:var(--dim);display:block;font-size:13px}
+  footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;color:var(--faint);font-size:13px}
+  a{color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">novel-ontology-pi · detailed design</div>
+  <h1>System 1 — The Autostep Miniloop</h1>
+  <p class="sub">The fast, local decision system inside the CLI. It reads a novel the way a
+  careful reader skims structure: where scenes break, which sentences are dialogue, whose
+  names appear, who is actually in the room, who is speaking. It <b>decides structure</b> —
+  it never writes the ontology. Everything it concludes becomes a proposal for the main
+  agent to approve at the merge gate.</p>
+  <p>
+    <span class="badge v1">design v0.1</span>
+    <span class="badge open">patch catalog: open for discussion</span>
+    <span class="badge">companion: DESIGN.md</span>
+  </p>
+</header>
+
+<h2>1 · Two systems, one boundary</h2>
+<div class="flow">
+  <div class="node"><b>📖 Novel block</b><span>one chapter, or a long block of text, in any language</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>✂️ Sectioning (code)</b><span>sentences with stable IDs + offsets. No model — ever.</span></div>
+  <div class="arrow">→</div>
+  <div class="node" style="border-color:var(--teal)"><b>🧠 System 1 miniloop</b><span>decision patches over Jev. This page.</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>📝 ChangeSet</b><span>accumulated proposals for this block</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>🛂 Merge gate</b><span>main agent approves / holds / revises</span></div>
+</div>
+<p class="sub" style="margin-top:10px"><b>Rule zero:</b> never ask a model what code can compute exactly.
+Sectioning, offsets, and scanning for <i>known</i> names are code. The decision model (Jev) is only
+asked genuinely ambiguous questions — and it answers with probabilities, not text, in ~70–500&nbsp;ms,
+batched: one call per window, all questions at once.</p>
+
+<h2>2 · Watch it run — one block, seven sentences</h2>
+<div class="panel demo-stage">
+  <div class="caption" id="caption"><span class="stepno">▶</span>Press play — the demo loops on its own.
+    <span class="why">A tiny block in the style of the legacy test corpus, with English glosses.</span></div>
+  <div class="progressdots" id="dots"></div>
+  <div class="sentrow" id="sentrow"></div>
+  <div class="splitcols" id="splitcols">
+    <div class="splitcol"><h4>Present in scene</h4><div id="colPresent"></div></div>
+    <div class="splitcol"><h4>Mentioned only</h4><div id="colMentioned"></div></div>
+    <div class="splitcol"><h4>Proposals → ChangeSet</h4><div id="colProps"></div></div>
+  </div>
+  <div class="csbar" id="csbar">ChangeSet for block <span class="mono">b0007</span> —
+    <b id="cscount">0 proposals</b>, main graph untouched
+    <div class="fill" id="csfill"></div></div>
+  <p style="margin-top:14px"><button class="replay" id="replay">↻ Replay</button></p>
+</div>
+
+<h2>3 · The patches — one functionality, one patch</h2>
+<p class="sub">Different functionalities need different questions, primitives and thresholds, so each
+is an independent <b>decision patch</b>. Patches run in a fixed order and hand their accepted
+decisions to the next via shared context. Adding a capability later = adding a patch —
+nothing else changes. <span class="badge v1">v1</span> patches are in the skeleton;
+<span class="badge cand">candidate</span> patches are proposals, kept open to discuss.</p>
+<div class="grid two" id="patchgrid"></div>
+
+<h2>4 · Confidence gates — the recursion</h2>
+<p class="sub">Every answer comes back as a probability. Deterministic code routes on it, per patch:</p>
+<div class="panel">
+  <div class="gatebar">
+    <div class="marker"></div>
+    <span class="lbl" style="left:27%">‹ 0.55 · <b style="color:var(--rose)">escalate</b> — subdivide the window, or hand
+      this unit to the work LLM</span>
+    <span class="lbl" style="left:70%">0.55–0.85 · <b style="color:var(--amber)">re-ask</b> — expand context (previous/next scene), decide again</span>
+    <span class="lbl" style="left:92%">≥ 0.85 · <b style="color:var(--green)">accept</b></span>
+  </div>
+  <p style="margin-top:44px;color:var(--dim);font-size:13.5px">Thresholds are per-patch and are a tuning
+  topic, not a constant — they get calibrated against real chapters once the Jev test key is wired.
+  The expensive work LLM only ever sees the hard fragments.</p>
+</div>
+
+<h2>5 · Rolling by block — and the merge gate</h2>
+<div class="panel">
+  <p style="margin-top:2px">Processing rolls <b>chapter by chapter</b> (or by long block). Each block's
+  proposals accumulate in its ChangeSet. The <b>main agent</b> — the Pi agent with the full conversation,
+  the memories, earlier chapters, and every other capability — reviews it:</p>
+  <div class="gate-flow">
+    <div class="outcome approve" id="ocApprove"><span class="stamp" style="color:var(--green)">APPROVE</span>
+      <p style="color:var(--dim);font-size:13.5px">Proposals are applied to the main graph through the
+      OntologyStore. The next block rolls.</p></div>
+    <div class="outcome hold" id="ocHold"><span class="stamp" style="color:var(--amber)">HOLD</span>
+      <p style="color:var(--dim);font-size:13.5px">Nothing is applied. Processing pauses; the agent explains
+      why and consults the user.</p></div>
+    <div class="outcome revise" id="ocRevise"><span class="stamp" style="color:var(--rose)">REVISE</span>
+      <p style="color:var(--dim);font-size:13.5px">The agent names the parts it doubts; the miniloop re-runs
+      <i>only those parts</i> and returns a revised ChangeSet for the block.</p></div>
+  </div>
+  <p style="color:var(--dim);font-size:13.5px;margin-bottom:4px">Novel progress — blocks merged:</p>
+  <div class="novel-progress"><i id="novelFill"></i></div>
+  <p style="color:var(--faint);font-size:12.5px" id="novelLbl">block 0 of 12 merged</p>
+  <p style="color:var(--dim);font-size:13.5px">Why an agent behind the gate: the miniloop is fast and local,
+  but it cannot know that a nickname in chapter 30 belongs to a character introduced in chapter 2, or that
+  two similar names are actually twins. The fast system <i>proposes</i>; the context-rich system <i>decides</i>.
+  Every ChangeSet is also the audit trail — each node in the graph can answer: which block, which sentences,
+  which patch, what confidence, who approved.</p>
+</div>
+
+<h2>6 · Open questions — to plan together</h2>
+<div class="panel">
+  <ul class="tight oq" style="font-size:14px">
+    <li>The patch catalog itself.<span>Which candidate patches (§3) earn a v1 slot? What functionality is missing entirely?</span></li>
+    <li>Name-candidate generation.<span>How does the name detector propose candidate spans for <i>new</i> names — speech-verb patterns, quote-adjacent sequences, work-LLM nomination, or a mix?</span></li>
+    <li>Revision granularity at the merge gate.<span>When the main agent sends a ChangeSet back, is the unit of revision a single proposal, a scene, or a patch's whole output for the block?</span></li>
+    <li>Gate thresholds per patch.<span>Accept / re-ask / escalate cut-offs (0.85 / 0.55 proposed) — to tune with the Jev test key on a golden chapter.</span></li>
+    <li>Window sizing.<span>How many sentences per window, and how much scene context rides along as state, given Jev's ~32k-token context?</span></li>
+    <li>Simulation-side reuse.<span>The same Jev connector can gate roleplay later (in-character checks, fork suggestions, branch matching) — designed now or later?</span></li>
+  </ul>
+</div>
+
+<footer>novel-ontology-pi · System 1 detailed design · v0.1 · 2026-10-21 ·
+See also <a href="../DESIGN.md">DESIGN.md</a> (overall architecture) and
+<code>src/autostep/</code> (the patch interfaces this page describes).</footer>
+</div>
+
+<script>
+/* ================= demo data ================= */
+const SENTENCES = [
+  {id:"b0007_s0000", zh:"御坂美琴推开咖啡店的门，环顾四周。", en:"Misaka Mikoto pushes open the café door and looks around."},
+  {id:"b0007_s0001", zh:"「姐姐大人，您迟到了十分钟。」", en:"“Onee-sama, you're ten minutes late.”", dialogue:true},
+  {id:"b0007_s0002", zh:"白井黑子坐在窗边，晃了晃手中的杯子。", en:"Shirai Kuroko sits by the window, swirling her cup."},
+  {id:"b0007_s0003", zh:"「初春说她马上就到。」", en:"“Uiharu says she'll be here any moment.”", dialogue:true},
+  {id:"b0007_s0004", zh:"话音未落，初春饰利推门进来。", en:"Just then, Uiharu Kazari comes through the door.", boundaryBefore:true},
+  {id:"b0007_s0005", zh:"「抱歉，我来晚了！」", en:"“Sorry I'm late!”", dialogue:true},
+  {id:"b0007_s0006", zh:"美琴想起黑子早上提到的风纪委员巡逻。", en:"Mikoto recalls the Judgement patrol Kuroko mentioned that morning."},
+];
+const sentrow = document.getElementById('sentrow');
+SENTENCES.forEach(s=>{
+  const d=document.createElement('div'); d.className='sent'; d.id='el_'+s.id;
+  d.innerHTML = `<span class="sid">${s.id}</span>${s.zh}<span class="gloss">${s.en}</span>
+    <span class="tag speaker"></span><span class="tag present">PRESENT</span><span class="tag mentioned">MENTIONED</span>`;
+  sentrow.appendChild(d);
+});
+const $=id=>document.getElementById(id);
+const dots=$('dots'); for(let i=0;i<7;i++){const d=document.createElement('i');dots.appendChild(d);}
+function mark(sid, word, cls){
+  const el=$('el_'+sid); if(!el) return;
+  el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.includes(word)){
+    const parts=n.textContent.split(word);
+    const span=document.createElement('span');
+    span.innerHTML=parts[0]+`<mark class="${cls}">${word}</mark>`+parts.slice(1).join(word);
+    el.replaceChild(span,n);
+  }});
+}
+function chip(text, cls){return `<span class="chip ${cls||""}">${text}</span>`;}
+
+const STEPS=[
+ {t:1900, cap:["Step 1 — Sectioning (code, no model)","The block is auto-segregated into sentences. Stable IDs + offsets become the provenance anchor for everything downstream."],
+  run(){ SENTENCES.forEach(s=>$('el_'+s.id).classList.add('on')); }},
+ {t:2100, cap:["Step 2 — Scene Boundary patch · noul","A noul question per sentence: does a new scene begin here? At s0004 the answer is 0.91 — someone enters, the scene's cast changes."],
+  run(){ $('el_b0007_s0004').classList.add('boundary'); }},
+ {t:2300, cap:["Step 3 — Dialogue Detector patch · choice","Which sentences are dialogue? segment_kind classifies each one, and continues_previous_dialogue stitches multi-sentence turns into dialogue units."],
+  run(){ SENTENCES.filter(s=>s.dialogue).forEach(s=>$('el_'+s.id).classList.add('dialogue'));
+         $('el_b0007_s0001').classList.add('stitched'); }},
+ {t:2600, cap:["Step 4 — Name Detector patch · code scan first, then Jev","Known names/aliases are matched by exact code scan — free and certain (御坂美琴, 黑子 as Mikoto's nickname target…). The unknown candidate 初春饰利 goes to Jev: is_new_name → 0.93."],
+  run(){ mark('b0007_s0000','御坂美琴','known'); mark('b0007_s0006','黑子','known');
+         mark('b0007_s0004','初春饰利','newname');
+         $('colProps').innerHTML += chip('＋ new Character: 初春饰利 (0.93)','new');
+         setCs(1); }},
+ {t:2400, cap:["Step 5 — Presence Detector patch · one noul per candidate","Present ≠ mentioned. Mikoto and Kuroko are in the room; Uiharu joins at s0004. In s0006 the patrol — and Kuroko's morning remark — are only talked about."],
+  run(){ $('splitcols').style.display='flex'; $('splitcols').classList.add('show');
+         $('colPresent').innerHTML = chip('御坂美琴 Mikoto')+chip('白井黑子 Kuroko')+chip('初春饰利 Uiharu','new');
+         $('colMentioned').innerHTML = chip('风纪委员 patrol (a thing, not a person)');
+         ['b0007_s0000','b0007_s0002'].forEach(id=>{const t=$('el_'+id).querySelector('.tag.present'); t.classList.add('show');});
+         setCs(2); }},
+ {t:2400, cap:["Step 6 — Speaker Attribution patch · choice","One pick per dialogue unit, from characters present + narrator + unknown. Speech style and turn alternation do the heavy lifting."],
+  run(){ const map={'b0007_s0001':'🗣 白井黑子 Kuroko','b0007_s0003':'🗣 白井黑子 Kuroko','b0007_s0005':'🗣 初春饰利 Uiharu'};
+         Object.entries(map).forEach(([id,who])=>{const t=$('el_'+id).querySelector('.tag.speaker'); t.textContent=who; t.classList.add('show');});
+         $('colProps').innerHTML += chip('＋ 3 SPEAKS_TO turns')+chip('＋ Scene ×1 · PRESENT_IN ×3');
+         setCs(5); }},
+ {t:2600, cap:["Step 7 — Accumulate, don't write","The block's proposals sit in its ChangeSet. The main graph is untouched until the main agent reviews at the merge gate (§5). Then the next block rolls."],
+  run(){ $('csbar').classList.add('show'); $('csfill').style.width='100%'; }},
+];
+let csn=0; function setCs(n){ csn=n; $('cscount').textContent = n+' proposal'+(n===1?'':'s'); $('csfill').style.width=(n/5*100)+'%'; }
+
+let stepIdx=0, timer=null;
+function reset(){
+  SENTENCES.forEach(s=>{const el=$('el_'+s.id); el.className='sent';});
+  document.querySelectorAll('.tag').forEach(t=>t.classList.remove('show'));
+  $('splitcols').classList.remove('show'); $('splitcols').style.display='';
+  $('colPresent').innerHTML=''; $('colMentioned').innerHTML=''; $('colProps').innerHTML='';
+  $('csbar').classList.remove('show'); setCs(0);
+  [...dots.children].forEach(d=>d.classList.remove('done'));
+}
+function play(){
+  clearTimeout(timer); reset(); stepIdx=0;
+  const next=()=>{
+    if(stepIdx>=STEPS.length){ timer=setTimeout(play, 4200); return; }
+    const st=STEPS[stepIdx];
+    $('caption').innerHTML=`<span class="stepno">${stepIdx+1} / ${STEPS.length}</span>${st.cap[0]}<span class="why">${st.cap[1]}</span>`;
+    st.run(); dots.children[stepIdx].classList.add('done'); stepIdx++;
+    timer=setTimeout(next, st.t);
+  };
+  next();
+}
+$('replay').onclick=play; play();
+
+/* ================= patch catalog ================= */
+const PATCHES=[
+ {id:"scene-boundary", v1:true, prims:["noul"], desc:"Where does a scene start? Also records why — location change, time skip, POV shift.", io:"in: sentences · out: scene spans"},
+ {id:"dialogue-detector", v1:true, prims:["choice","noul"], desc:"Takes the sentence IDs from auto segregation and chooses which ones are dialogue; stitches multi-sentence turns into single dialogue units.", io:"in: sentences · out: dialogue units"},
+ {id:"name-detector", v1:true, prims:["code scan","noul","choice"], desc:"Code scans for existing names/aliases (free, certain). Jev then judges candidate spans: a new name? a new nickname for a known character?", io:"in: sentences + alias table · out: entity / alias proposals"},
+ {id:"presence-detector", v1:true, prims:["noul × candidates"], desc:"Which characters are in the scene — one yes/no per candidate, because choice returns a single pick. Protects present vs. merely mentioned.", io:"in: scene span + candidates · out: PRESENT_IN / MENTIONED_IN"},
+ {id:"speaker-attribution", v1:true, prims:["choice"], desc:"Which character a dialogue belongs to — candidates are the characters present, plus narrator and unknown.", io:"in: dialogue units + present set · out: turns (speaker, sentences)"},
+ {id:"addressee-detector", v1:false, prims:["choice"], desc:"Who is being spoken to — needed for SPEAKS_TO / ADDRESSES edges and multi-party scenes.", io:"candidate"},
+ {id:"state-change-detector", v1:false, prims:["noul"], desc:"Did this scene change a character's emotion, knowledge, location or relationships? Feeds STATE_BEFORE / STATE_AFTER.", io:"candidate"},
+ {id:"event-worthiness", v1:false, prims:["score"], desc:"Is this segment an event worth a node in the ontology, and how important is it? Importance also drives the fork-point browser.", io:"candidate"},
+ {id:"causal-candidate", v1:false, prims:["noul"], desc:"Does this event plausibly cause / follow from that earlier event? Proposes CAUSES edges for extraction to confirm.", io:"candidate"},
+ {id:"coreference", v1:false, prims:["choice"], desc:"Pronouns and unnamed mentions (“the girl”, “she”) — who do they refer to, among present + known characters + none?", io:"candidate"},
+ {id:"foreshadowing-flag", v1:false, prims:["noul"], desc:"Cheap to flag now, expensive to retrofit later: does this detail look planted for a future payoff?", io:"candidate — v2?"},
+];
+$('patchgrid').innerHTML = PATCHES.map(p=>`
+ <div class="card"><h3><code>${p.id}</code> ${p.v1?'<span class="badge v1">v1</span>':'<span class="badge cand">candidate</span>'}</h3>
+ <p>${p.desc}</p>
+ <p>${p.prims.map(x=>`<span class="prim ${x.startsWith('noul')?'noul':x.startsWith('choice')?'choice':x.startsWith('score')?'score':''}">${x}</span>`).join(' ')}
+ <span style="color:var(--faint)"> · ${p.io}</span></p></div>`).join('');
+
+/* ================= merge gate cycler ================= */
+const outs=[$('ocApprove'),$('ocHold'),$('ocRevise')];
+let gi=0, blocks=0;
+setInterval(()=>{
+  outs.forEach(o=>o.classList.remove('lit')); outs[gi].classList.add('lit');
+  if(gi===0){ blocks=Math.min(12, blocks+1); $('novelFill').style.width=(blocks/12*100)+'%';
+    $('novelLbl').textContent=`block ${blocks} of 12 merged`; if(blocks===12) blocks=0; }
+  gi=(gi+1)%3;
+}, 2400);
+</script>
+</body>
+</html>

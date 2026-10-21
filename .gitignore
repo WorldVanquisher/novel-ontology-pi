@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+*.lbug
+*.lbug.wal
+novels/*/ontology/graph.lbug*
+.DS_Store

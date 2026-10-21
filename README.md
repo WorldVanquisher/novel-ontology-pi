@@ -1,0 +1,68 @@
+# novel-ontology-pi
+
+A **Pi-agent-compatible Skill + CLI bundle** that turns a novel — in any
+language — into a queryable **ontology** of characters, events, causality
+and timelines, powering **character simulation** and **parallel-universe
+story forking** at a time point the user chooses.
+
+No Docker. No hosted database. Download it, drop in your novel, provide
+two API keys (one work LLM + one decision model), and start.
+
+## How it works
+
+- **The Skill** (`skills/novel-ontology/SKILL.md`) teaches a
+  [Pi agent](https://github.com/earendil-works/pi) the workflows:
+  ingest → review → query → simulate → fork.
+- **The CLI** (`novel`) implements everything: deterministic sentence
+  sectioning, ontology extraction, storage, queries, forking.
+- **System 1 — the autostep miniloop** (inside the CLI): a recursive
+  decision system built on **Jev** (TypeSafe AI's decision model). It
+  works as independent **decision patches** — a dialogue detector, a name
+  detector, a presence detector, a speaker attributor — each asking the
+  decision model small typed questions (`noul` / `choice` / `score`)
+  over auto-sectioned sentences.
+- **The merge gate:** the miniloop never writes to the ontology main
+  graph. Per chapter/block it accumulates a **ChangeSet** of proposed
+  changes, and the main agent — holding the full context — **approves,
+  holds, or sends parts back for revision**. Block by block, until the
+  novel is done.
+- **Storage:** a portable JSONL **bundle** is the source of truth;
+  **Ladybug** (embedded property graph + Cypher, with native full-text
+  and vector indexes) is the hot query engine rebuilt from it. One local
+  folder per novel. Internal naming is all English, so novels in any
+  language share one paradigm.
+
+📐 **Design:** [DESIGN.md](DESIGN.md) ·
+🧠 **System 1 in detail (animated):** [docs/system1.html](docs/system1.html)
+
+## Quick start
+
+```bash
+npm install
+npm run build
+npm test                                   # mocked Jev — costs nothing
+
+# Deterministic sectioning (works today):
+node dist/src/cli.js section path/to/chapter.txt --pretty
+```
+
+Configuration (see `.env.example`): `WORK_LLM_*` for the one work LLM
+API, `TYPESAFE_API_KEY` + pinned `JEV_MODEL` for the decision model.
+Keys are user inputs — provide them via environment/secure entry, never
+commit them.
+
+## Status
+
+v0.1 skeleton (2026-10-21): founding design, Skill, CLI skeleton with
+working sectioning, decision-patch interfaces + v1 patches, ChangeSet /
+merge-gate machinery, ontology schema v1, and connector interfaces for
+Ladybug, the bundle, Jev, and the work LLM. Live wiring (Ladybug driver,
+Jev key, Pi provider layer) lands incrementally — see the open questions
+in DESIGN.md §9.
+
+## Lineage
+
+A clean-slate rebuild of
+[agentic_chinese_novel_discord_bot](https://github.com/gardianofthedarkness/agentic_chinese_novel_discord_bot)
+(Python/LangGraph + Neo4j/Postgres/Qdrant/Redis under Docker), keeping
+its ontology and timeline/fork design ideas and replacing the stack.

@@ -1,0 +1,44 @@
+import type { OntologyStore } from "../ontology/store.js";
+import type { ChangeSet } from "./changeset.js";
+import type { Entity, OntEvent, Relation, Scene } from "../ontology/types.js";
+
+/**
+ * Applies an APPROVED ChangeSet to the ontology main graph.
+ * This is the only code path from miniloop output to the store, and it is
+ * only reachable after the main agent approves the merge (DESIGN.md
+ * §Merge gate). Held or revision-requested change sets never reach here.
+ */
+export async function applyChangeSet(
+  store: OntologyStore,
+  changeset: ChangeSet,
+): Promise<{ applied: number }> {
+  if (changeset.status !== "approved") {
+    throw new Error(
+      `Refusing to apply change set ${changeset.id}: status is ${changeset.status}, not approved.`,
+    );
+  }
+  let applied = 0;
+  for (const p of changeset.proposals) {
+    switch (p.kind) {
+      case "upsert_entity":
+        await store.upsertEntity(p.payload as Entity);
+        break;
+      case "create_event":
+        await store.upsertEvent(p.payload as OntEvent);
+        break;
+      case "create_scene":
+        await store.upsertScene(p.payload as Scene);
+        break;
+      case "add_relation":
+        await store.addRelation(p.payload as Relation);
+        break;
+      case "add_alias":
+      case "set_state_change":
+        // Alias/state payloads are folded into entity/event updates by the
+        // extraction step before apply time (see DESIGN.md open questions).
+        break;
+    }
+    applied++;
+  }
+  return { applied };
+}
