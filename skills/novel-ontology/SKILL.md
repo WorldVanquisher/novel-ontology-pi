@@ -18,6 +18,9 @@ in plain language.
   You never call it yourself.
 - If `novel config` reports a missing key, ask the user to provide it
   through secure entry. **Never ask for a key in chat, never invent one.**
+- `novel llm ping|probe` smoke-test the work-LLM plumbing (reachability,
+  JSON mode) without ingesting anything; `WORK_LLM_BASE_URL` can point
+  them at a local mock server so they cost nothing.
 
 ## Workflow 1 — Ingest a novel (the merge gate is yours)
 

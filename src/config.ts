@@ -14,6 +14,8 @@ export interface ConfigReport {
   workLlm: {
     provider: string;
     model: string | null;
+    /** OpenAI-compatible API root (no trailing path); null when the provider is unknown and WORK_LLM_BASE_URL is unset. */
+    baseUrl: string | null;
     apiKey: KeyStatus;
     apiKeyEnv: "WORK_LLM_API_KEY";
   };
@@ -42,6 +44,12 @@ const nonEmpty = (v: string | undefined): string | null => {
   return t ? t : null;
 };
 
+/** API roots for providers with a well-known OpenAI-compatible endpoint. */
+const WORK_LLM_DEFAULT_BASE_URLS: Record<string, string> = {
+  deepseek: "https://api.deepseek.com/v1",
+  openai: "https://api.openai.com/v1",
+};
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigReport {
   const workKey = nonEmpty(env.WORK_LLM_API_KEY);
   const jevKey = nonEmpty(env.TYPESAFE_API_KEY);
@@ -53,10 +61,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigReport {
   const dimensionRaw = nonEmpty(env.EMBEDDING_DIMENSION);
   const dimension = dimensionRaw ? Number(dimensionRaw) : null;
 
+  const workProvider = nonEmpty(env.WORK_LLM_PROVIDER) ?? "deepseek";
+
   return {
     workLlm: {
-      provider: nonEmpty(env.WORK_LLM_PROVIDER) ?? "deepseek",
+      provider: workProvider,
       model: nonEmpty(env.WORK_LLM_MODEL),
+      baseUrl:
+        nonEmpty(env.WORK_LLM_BASE_URL) ??
+        WORK_LLM_DEFAULT_BASE_URLS[workProvider] ??
+        null,
       apiKey: workKey ? "configured" : "missing",
       apiKeyEnv: "WORK_LLM_API_KEY",
     },

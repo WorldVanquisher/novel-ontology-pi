@@ -190,6 +190,8 @@ novel fork create --at <event-id> --label <name>
 novel simulate <character> [--branch <id>]
 novel bundle export|import         portable ontology in / out
 novel graph build|reindex          (re)build Ladybug from the bundle
+novel llm ping|probe               work-LLM plumbing smoke tests (tiny
+                                   completions; not wired into ingest)
 novel config                       model routing (keys via secure entry)
 ```
 JSON out by default, `--pretty` for humans.

@@ -20,6 +20,7 @@ import {
   DEFAULT_MIN_IMPORTANCE,
   DEFAULT_SEARCH_LIMIT,
 } from "./commands/queryCommands.js";
+import { llmPing, llmProbe } from "./commands/llmCommands.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
 import { initWorkspace } from "./workspace/init.js";
@@ -57,6 +58,8 @@ const COMMANDS: Record<string, string> = {
   "novel bundle import <bundle-dir> <target-dir>":
     "Import a bundle into a new novel dir (validates first; never overwrites)",
   "novel graph reindex": "Deferred: no vector/FTS indexes in the graph-first phase",
+  "novel llm ping": "Work-LLM smoke test: one tiny completion (reachability, latency, usage)",
+  "novel llm probe": "Work-LLM smoke test: JSON-mode reply, validated",
   "novel config": "Show model routing config (keys via env / secure entry only)",
 };
 
@@ -101,6 +104,18 @@ async function main(): Promise<void> {
   if (cmd === "config") {
     out(loadConfig(), pretty);
     return;
+  }
+
+  if (cmd === "llm") {
+    if (sub === "ping") {
+      out(await llmPing(), pretty);
+      return;
+    }
+    if (sub === "probe") {
+      out(await llmProbe(), pretty);
+      return;
+    }
+    throw new Error("Usage: novel llm ping|probe");
   }
 
   if (cmd === "watch") {
