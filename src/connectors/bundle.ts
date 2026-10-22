@@ -109,14 +109,24 @@ export class BundleStore implements OntologyStore {
 
   /** Read a JSONL file back into memory (used by `novel graph build`). */
   async loadFile<T>(file: string): Promise<T[]> {
+    let raw: string;
     try {
-      const raw = await readFile(join(this.ontologyDir, file), "utf8");
-      return raw
-        .split("\n")
-        .filter((l) => l.trim().length > 0)
-        .map((l) => JSON.parse(l) as T);
-    } catch {
-      return [];
+      raw = await readFile(join(this.ontologyDir, file), "utf8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw err;
     }
+
+    const records: T[] = [];
+    const lines = raw.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      try {
+        records.push(JSON.parse(lines[i]) as T);
+      } catch (err) {
+        throw new Error(`corrupt JSONL in ${file} line ${i + 1}: ${String(err)}`);
+      }
+    }
+    return records;
   }
 }
