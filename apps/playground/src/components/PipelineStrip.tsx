@@ -1,55 +1,44 @@
-import { Background, ReactFlow, type Edge, type Node } from "@xyflow/react";
+import { Position, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-const STAGES = [
-  { id: "sectioning", label: "Sectioning" },
-  { id: "miniloop", label: "Miniloop · Jev" },
-  { id: "extraction", label: "Extraction" },
-  { id: "changeset", label: "ChangeSet" },
-  { id: "gate", label: "Merge gate" },
-];
+const STAGES = ["Sectioning", "Miniloop / Jev", "Extraction", "ChangeSet", "Merge gate"];
+const STATUS_LABEL = { idle: "Waiting for agent", working: "Agent working", review: "Awaiting review", complete: "Merged · held records stay separate", error: "Replay unavailable" };
 
-/** The pipeline strip (React Flow) — which stage is working, at a glance. */
-export function PipelineStrip({ stage }: { stage: number }) {
-  const nodes: Node[] = STAGES.map((s, i) => ({
-    id: s.id,
-    position: { x: i * 150, y: 12 },
-    data: { label: s.label },
-    draggable: false,
-    style: {
-      width: 128,
-      borderRadius: 9,
-      fontSize: 12,
-      color: i < stage ? "#34d399" : i === stage ? "#2dd4bf" : "#8b96ab",
-      background: "#121828",
-      border: `1px solid ${i < stage ? "#34d399" : i === stage ? "#2dd4bf" : "#26304a"}`,
-      boxShadow: i === stage ? "0 0 12px rgba(45,212,191,.35)" : "none",
-    },
+interface Props {
+  stage: number;
+  status: keyof typeof STATUS_LABEL;
+  reducedMotion: boolean;
+}
+
+export function PipelineStrip({ stage, status, reducedMotion }: Props) {
+  const nodes: Node[] = STAGES.map((label, index) => ({
+    id: String(index),
+    position: { x: index * 166, y: 0 },
+    data: { label: `${String(index + 1).padStart(2, "0")} / ${label}` },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+    className: `${index < stage || status === "complete" ? "complete" : index === stage ? "current" : ""}${index === stage && status === "working" ? " working" : ""}`,
+    ariaLabel: `${label}: ${index < stage || status === "complete" ? "complete" : index === stage ? STATUS_LABEL[status] : "waiting"}`,
+    style: { width: 138, height: 32 },
   }));
-  const edges: Edge[] = STAGES.slice(1).map((s, i) => ({
-    id: `pe_${i}`,
-    source: STAGES[i].id,
-    target: s.id,
-    animated: stage === i + 1,
-    style: { stroke: "#3b4a6b" },
+  const edges: Edge[] = STAGES.slice(1).map((_, index) => ({
+    id: `pipeline-${index}`,
+    source: String(index),
+    target: String(index + 1),
+    type: "straight",
+    animated: !reducedMotion && status === "working" && stage === index + 1,
+    style: { stroke: index < stage ? "var(--olive)" : "var(--faint)", strokeWidth: 1.5 },
   }));
   return (
-    <div style={{ height: 74, background: "#0d1220" }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        fitView
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        panOnDrag={false}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
-        zoomOnDoubleClick={false}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="#1b2438" gap={18} />
-      </ReactFlow>
-    </div>
+    <section className="pipeline" aria-label="Live agent processing pipeline">
+      <div className="pipeline-summary"><span className="eyebrow">Processing / 01—05</span><span role="status">{STATUS_LABEL[status]}{status === "working" ? ` · ${STAGES[stage]}` : ""}</span></div>
+      <div className="pipeline-viewport"><div className="pipeline-flow">
+        <ReactFlow nodes={nodes} edges={edges} fitView fitViewOptions={{ padding: 0.08 }} minZoom={0.4} maxZoom={1}
+          nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} edgesFocusable={false}
+          panOnDrag={false} panOnScroll={false} zoomOnScroll={false} zoomOnPinch={false} zoomOnDoubleClick={false}
+          preventScrolling={false} colorMode="dark" proOptions={{ hideAttribution: true }}>
+        </ReactFlow>
+      </div></div>
+    </section>
   );
 }
