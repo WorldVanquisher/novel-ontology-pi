@@ -1,5 +1,9 @@
 import { sectionBlock } from "../text/sectioning.js";
 import { Miniloop } from "../autostep/miniloop.js";
+import {
+  pinsForBlock,
+  type Correction,
+} from "../maintenance/corrections.js";
 import type { DecisionModel } from "../connectors/jev.js";
 import type { WorkModel } from "../connectors/llm.js";
 import type {
@@ -63,6 +67,12 @@ export class BlockProcessor {
       workModel?: WorkModel;
       /** Distinct event/scene counts in the bundle, for ID/order sequencing. */
       loadCounts?: () => Promise<{ events: number; scenes: number }>;
+      /**
+       * Recall corrections (sector 09): pinned decisions the reviewing
+       * agent has issued for specific blocks. Loaded once per run; the
+       * pins for each block are honored by its miniloop pass.
+       */
+      loadCorrections?: () => Promise<Correction[]>;
     } = {},
   ) {}
 
@@ -82,6 +92,9 @@ export class BlockProcessor {
       : undefined;
     const emit = this.observation.emit ?? (this.observation.novelDir ? new EventLog(this.observation.novelDir).emit : undefined);
 
+    const corrections = this.observation.loadCorrections
+      ? await this.observation.loadCorrections()
+      : [];
     for (const block of blocks) {
       await emit?.({ type: "block.started", blockId: block.blockId });
       const { sentences } = sectionBlock(block.text, mergedBlocks.length);
@@ -96,7 +109,12 @@ export class BlockProcessor {
           sentences,
           knownEntities,
           stateSummary: `Processing block ${block.blockId}.`,
+          pinnedAnswers: pinsForBlock(corrections, block.blockId),
         });
+        for (const key of result.appliedPins ?? []) {
+          result.changeset.reviewNotes[`recall:pin:${key}`] =
+            "Decision pinned by a reviewing-agent correction (sector 09 recall); the miniloop honored the pin instead of its own judgment.";
+        }
         if (extract) {
           // Sector 08: extraction reads the miniloop's structured
           // scenes and returns the block's FINAL proposal list —

@@ -22,6 +22,9 @@ import {
 } from "./commands/queryCommands.js";
 import { llmPing, llmProbe } from "./commands/llmCommands.js";
 import { ingestNovel } from "./commands/ingestCommands.js";
+import { runMatch } from "./commands/matchCommands.js";
+import { runFix } from "./commands/fixCommands.js";
+import { runRecall } from "./commands/recallCommands.js";
 import {
   jevLogin,
   jevLogout,
@@ -49,6 +52,15 @@ const COMMANDS: Record<string, string> = {
   "novel blocks <file> [--size N]": "Chapter detection + block cutting map (no models)",
   "novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N] [--no-extract]":
     "Full loop: blocks -> miniloop (live Jev) -> extraction (work LLM, when configured) -> ChangeSets -> merge gate -> graph. Default stops at the first gate; --auto-approve applies every ChangeSet",
+  "novel match <novel-dir> [--changeset <id>]":
+    "Entity-matching review packet: code nominates duplicate pairs, System 1 (Jev) reviews the batch with a checklist, only unsettled pairs are raised to the agent",
+  "novel fix merge|rename|add-form|relate|unrelate|remove-entity|remove-event <novel-dir> ...":
+    "Pointwise maintenance over the bundle (audited in maintenance.jsonl, graph rebuilt): merge two entities, rename, add a name form, relate/unrelate, remove a record",
+  "novel fix correct <novel-dir> --block <id> --key <decision-key> --value <v>":
+    "Pin a System 1 decision for a block (recall protocol): the re-run honors the pin instead of re-deciding",
+  "novel fix corrections <novel-dir>": "List the pinned corrections in a workspace",
+  "novel recall <novel-dir> <blockId>":
+    "Recall System 1 for one block: re-run it from the stored source with pinned corrections honored; a fresh held ChangeSet replaces the superseded one (kept for audit)",
   "novel miniloop run|inspect": "Run the Jev miniloop; inspect per-window decisions",
   "novel changeset list|show|approve|hold <novel-dir> [id]":
     "The merge gate: review accumulated proposals before they touch the main graph",
@@ -306,6 +318,58 @@ async function main(): Promise<void> {
       }),
       pretty,
     );
+    return;
+  }
+
+  if (cmd === "match") {
+    const novelDir = positional[1];
+    if (!novelDir || novelDir.startsWith("--")) {
+      throw new Error("Usage: novel match <novel-dir> [--changeset <id>]");
+    }
+    out(
+      await runMatch(novelDir, { changesetId: flag(positional, "--changeset") }),
+      pretty,
+    );
+    return;
+  }
+
+  if (cmd === "fix" && sub) {
+    const novelDir = positional[2];
+    if (!novelDir || novelDir.startsWith("--")) {
+      throw new Error(
+        "Usage: novel fix <op> <novel-dir> [args] — ops: merge, rename, add-form, relate, unrelate, remove-entity, remove-event, correct, corrections",
+      );
+    }
+    const flagNames = ["--reason", "--kind", "--block", "--key", "--value"];
+    const rest: string[] = [];
+    for (let i = 3; i < positional.length; i++) {
+      if (flagNames.includes(positional[i])) {
+        i++; // skip the flag's value
+        continue;
+      }
+      if (positional[i].startsWith("--")) continue;
+      rest.push(positional[i]);
+    }
+    out(
+      await runFix(novelDir, sub, rest, {
+        reason: flag(positional, "--reason"),
+        kind: flag(positional, "--kind"),
+        block: flag(positional, "--block"),
+        key: flag(positional, "--key"),
+        value: flag(positional, "--value"),
+      }),
+      pretty,
+    );
+    return;
+  }
+
+  if (cmd === "recall") {
+    const novelDir = positional[1];
+    const blockId = positional[2];
+    if (!novelDir || !blockId || blockId.startsWith("--")) {
+      throw new Error("Usage: novel recall <novel-dir> <blockId>");
+    }
+    out(await runRecall(novelDir, blockId), pretty);
     return;
   }
 

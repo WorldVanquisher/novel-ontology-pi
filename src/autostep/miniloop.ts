@@ -25,6 +25,8 @@ export interface MiniloopResult {
   escalations: { patchId: string; unitId: string; reason: string }[];
   accepted: Record<string, unknown>;
   windows: WindowRecord[];
+  /** Correction keys this run honored instead of deciding (sector 09 recall). */
+  appliedPins?: string[];
 }
 
 /**
@@ -66,6 +68,14 @@ export class Miniloop {
     sentences: Sentence[];
     knownEntities: Entity[];
     stateSummary: string;
+    /**
+     * Pinned decisions from the recall protocol (sector 09): when the
+     * reviewing agent has traced a cascade back to one early decision,
+     * its correction is honored here — the question is still asked
+     * (the record shows what the loop WOULD have decided), but the
+     * applied answer is the pin, at full confidence.
+     */
+    pinnedAnswers?: Map<string, unknown>;
   }): Promise<MiniloopResult> {
     const changeset = newChangeSet(input.blockId);
     const escalations: MiniloopResult["escalations"] = [];
@@ -101,6 +111,7 @@ export class Miniloop {
 
     const windows: WindowRecord[] = [];
     const seenProposalIds = new Set<string>();
+    const appliedPins: string[] = [];
     let firstWindow = true;
     for (let w = 0; w < input.sentences.length; w += windowSize) {
       ctx.windowSentenceIds = input.sentences
@@ -119,10 +130,20 @@ export class Miniloop {
               `${id}: ${input.sentences.find((s) => s.id === id)?.text ?? ""}`,
           )
           .join("\n");
-        const answers = await this.decisions.decide(
+        const decided = await this.decisions.decide(
           `${ctx.stateSummary}\n---\n${windowText}`,
           questions,
         );
+        // Recall pins (sector 09): a pinned key keeps the question on
+        // the record but the applied answer is the reviewing agent's
+        // correction, at full confidence.
+        const answers = decided.map((a) => {
+          if (input.pinnedAnswers?.has(a.key)) {
+            if (!appliedPins.includes(a.key)) appliedPins.push(a.key);
+            return { ...a, value: input.pinnedAnswers.get(a.key) as string | number, confidence: 1 };
+          }
+          return a;
+        });
         const outcome = patch.applyAnswers(ctx, answers);
         for (const p of outcome.proposals) {
           // A patch that re-runs per window must not double-propose:
@@ -152,6 +173,6 @@ export class Miniloop {
     }
 
     changeset.status = "pending_review";
-    return { changeset, escalations, accepted: ctx.accepted, windows };
+    return { changeset, escalations, accepted: ctx.accepted, windows, appliedPins };
   }
 }

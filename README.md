@@ -160,6 +160,23 @@ node dist/src/cli.js graph build <target-dir>/ontology       # rebuild the graph
 - **Nothing is ever overwritten**: if the target directory already
   exists, both commands stop with an error and leave it untouched.
 
+## Gate review tooling: `match` / `fix` / `recall`
+
+The merge gate's review is staged. `novel match <novel-dir>
+[--changeset <id>]` produces the entity-matching packet: code
+nominates duplicate pairs (shared forms, script-variant folds,
+containment, near-identical forms), System 1 (Jev) reviews the whole
+batch with a three-question checklist, and only the pairs it cannot
+settle are raised to the agent — confident pairs arrive with a ready
+merge command. `novel fix …` applies pointwise repairs over the
+bundle (`merge`, `rename`, `add-form`, `relate`, `unrelate`,
+`remove-entity`, `remove-event`), each audited in `maintenance.jsonl`
+with the graph rebuilt after it. When a whole subtree is wrong, the
+agent pins the early decision that caused the cascade
+(`novel fix correct --block <id> --key <decision-key> --value <v>`)
+and `novel recall <novel-dir> <blockId>` re-runs just that block from
+the workspace's stored source with the pin honored.
+
 ## Status
 
 Read-only processing event streaming: `novel watch <novel-dir> [--port 4317]`
