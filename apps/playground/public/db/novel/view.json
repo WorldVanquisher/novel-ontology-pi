@@ -1,0 +1,671 @@
+{
+  "laneNodes": [
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "canon",
+      "chrono": 1,
+      "lanePos": [
+        -260,
+        60,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_meet",
+      "label": "相遇",
+      "subLabel": "第一章 · big event",
+      "kind": "bigEvent"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "canon",
+      "chrono": 2,
+      "lanePos": [
+        -90,
+        60,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_promise",
+      "label": "约定",
+      "subLabel": "第一章 · big event",
+      "kind": "bigEvent"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "canon",
+      "chrono": 3,
+      "lanePos": [
+        90,
+        60,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_return",
+      "label": "归还终端",
+      "subLabel": "第二章 · big event — click to enter",
+      "kind": "bigEvent"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "canon",
+      "chrono": 4,
+      "lanePos": [
+        260,
+        60,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_evening",
+      "label": "傍晚",
+      "subLabel": "第三章 · big event",
+      "kind": "bigEvent"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "branch",
+      "chrono": 1,
+      "lanePos": [
+        -200,
+        -80,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_kept",
+      "label": "终端未丢",
+      "subLabel": "branch · big event",
+      "kind": "bigEvent"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "branch",
+      "chrono": 2,
+      "lanePos": [
+        30,
+        -80,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_found",
+      "label": "寻回",
+      "subLabel": "branch · big event — agent is knitting here",
+      "kind": "bigEvent"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "lane": "branch",
+      "chrono": 3,
+      "lanePos": [
+        230,
+        -80,
+        0
+      ],
+      "interiorPos": [
+        0,
+        0,
+        0
+      ],
+      "id": "be_parfait",
+      "label": "芭菲",
+      "subLabel": "branch · big event",
+      "kind": "bigEvent"
+    }
+  ],
+  "laneEdges": [
+    {
+      "state": "canon",
+      "parent": null,
+      "id": "le1",
+      "from": "be_meet",
+      "to": "be_promise",
+      "kind": "flow"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "id": "le2",
+      "from": "be_promise",
+      "to": "be_return",
+      "kind": "flow"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "id": "le3",
+      "from": "be_return",
+      "to": "be_evening",
+      "kind": "flow"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "id": "le4",
+      "from": "be_kept",
+      "to": "be_found",
+      "kind": "flow"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "id": "le5",
+      "from": "be_found",
+      "to": "be_parfait",
+      "kind": "flow"
+    },
+    {
+      "state": "canon",
+      "parent": null,
+      "id": "le_fork",
+      "from": "be_return",
+      "to": "be_kept",
+      "kind": "cross"
+    }
+  ],
+  "interiors": {
+    "be_return": {
+      "nodes": [
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 0,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -250,
+            -10,
+            -30
+          ],
+          "id": "cafe",
+          "label": "咖啡店",
+          "kind": "location"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 1,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -200,
+            55,
+            -10
+          ],
+          "id": "scene_counter",
+          "label": "场景·柜台",
+          "kind": "scene"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 1,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -160,
+            130,
+            0
+          ],
+          "id": "uiharu",
+          "label": "初春饰利",
+          "kind": "character"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 2,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -110,
+            55,
+            10
+          ],
+          "id": "dlg_a1",
+          "label": "对话①",
+          "subLabel": "初春 → 美琴",
+          "kind": "dialogue"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 3,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -20,
+            55,
+            -15
+          ],
+          "id": "ev_found",
+          "label": "发现终端",
+          "kind": "event"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 3,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            30,
+            135,
+            5
+          ],
+          "id": "mikoto",
+          "label": "御坂美琴",
+          "kind": "character"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 4,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            80,
+            55,
+            10
+          ],
+          "id": "dlg_a2",
+          "label": "对话②",
+          "subLabel": "美琴 → 初春",
+          "kind": "dialogue"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 5,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            200,
+            55,
+            -10
+          ],
+          "id": "ev_confirm",
+          "label": "确认归属",
+          "kind": "event"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 0,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -240,
+            -120,
+            15
+          ],
+          "id": "street",
+          "label": "街道",
+          "kind": "location"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 1,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -180,
+            -60,
+            25
+          ],
+          "id": "scene_patrol",
+          "label": "场景·巡逻",
+          "kind": "scene"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 2,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -120,
+            10,
+            30
+          ],
+          "id": "kuroko",
+          "label": "白井黒子",
+          "kind": "character"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 2.5,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -60,
+            -60,
+            40
+          ],
+          "id": "dlg_b1",
+          "label": "对话③",
+          "subLabel": "黒子 → 美琴 · 电话",
+          "kind": "dialogue"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "lane": "canon",
+          "chrono": 4,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            120,
+            -60,
+            20
+          ],
+          "id": "ev_patrol",
+          "label": "街道巡查",
+          "kind": "event"
+        }
+      ],
+      "edges": [
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie1",
+          "from": "cafe",
+          "to": "scene_counter",
+          "kind": "contains"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie2",
+          "from": "scene_counter",
+          "to": "dlg_a1",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie3",
+          "from": "dlg_a1",
+          "to": "ev_found",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie4",
+          "from": "ev_found",
+          "to": "dlg_a2",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie5",
+          "from": "dlg_a2",
+          "to": "ev_confirm",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie6",
+          "from": "street",
+          "to": "scene_patrol",
+          "kind": "contains"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie7",
+          "from": "scene_patrol",
+          "to": "dlg_b1",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie8",
+          "from": "dlg_b1",
+          "to": "ev_patrol",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie9",
+          "from": "uiharu",
+          "to": "dlg_a1",
+          "kind": "speaks"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie10",
+          "from": "dlg_a1",
+          "to": "mikoto",
+          "kind": "speaks"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie11",
+          "from": "mikoto",
+          "to": "dlg_a2",
+          "kind": "speaks"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie12",
+          "from": "kuroko",
+          "to": "dlg_b1",
+          "kind": "speaks"
+        },
+        {
+          "state": "canon",
+          "parent": "be_return",
+          "id": "ie13",
+          "from": "dlg_b1",
+          "to": "mikoto",
+          "kind": "cross"
+        }
+      ]
+    },
+    "be_found": {
+      "nodes": [
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "lane": "branch",
+          "chrono": 0,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -230,
+            -40,
+            10
+          ],
+          "id": "b_street",
+          "label": "街道",
+          "kind": "location"
+        },
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "lane": "branch",
+          "chrono": 1,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -140,
+            90,
+            20
+          ],
+          "id": "b_kuroko",
+          "label": "白井黒子",
+          "kind": "character"
+        },
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "lane": "branch",
+          "chrono": 1,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -170,
+            -30,
+            25
+          ],
+          "id": "b_scene_search",
+          "label": "场景·搜寻",
+          "kind": "scene"
+        },
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "lane": "branch",
+          "chrono": 2,
+          "lanePos": [
+            0,
+            0,
+            0
+          ],
+          "interiorPos": [
+            -40,
+            -30,
+            15
+          ],
+          "id": "b_ev_ask",
+          "label": "沿街询问",
+          "kind": "event"
+        }
+      ],
+      "edges": [
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "id": "be1",
+          "from": "b_street",
+          "to": "b_scene_search",
+          "kind": "contains"
+        },
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "id": "be2",
+          "from": "b_scene_search",
+          "to": "b_ev_ask",
+          "kind": "flow"
+        },
+        {
+          "state": "canon",
+          "parent": "be_found",
+          "id": "be3",
+          "from": "b_kuroko",
+          "to": "b_ev_ask",
+          "kind": "speaks"
+        }
+      ]
+    }
+  },
+  "bigEventLabels": {
+    "be_meet": "相遇",
+    "be_promise": "约定",
+    "be_return": "归还终端",
+    "be_evening": "傍晚",
+    "be_kept": "终端未丢",
+    "be_found": "寻回",
+    "be_parfait": "芭菲"
+  }
+}

@@ -1,0 +1,3 @@
+{"id":"scene_counter","location":"loc_cafe","summary":"咖啡店柜台前","chapter":2}
+{"id":"scene_patrol","location":"loc_street","summary":"街道巡逻","chapter":2}
+{"id":"b_scene_search","location":"loc_street","summary":"沿街搜寻 (branch)","chapter":2}

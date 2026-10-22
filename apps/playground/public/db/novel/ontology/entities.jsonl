@@ -1,0 +1,5 @@
+{"id":"char_mikoto","kind":"character","names":[{"text":"御坂美琴","lang":"ja","kind":"canonical"}],"summary":"Railgun of Tokiwadai."}
+{"id":"char_kuroko","kind":"character","names":[{"text":"白井黒子","lang":"ja","kind":"canonical"}],"summary":"Judgment officer, teleporter."}
+{"id":"char_uiharu","kind":"character","names":[{"text":"初春饰利","lang":"ja","kind":"canonical"}],"summary":"Judgment operator, flower headband."}
+{"id":"loc_cafe","kind":"location","names":[{"text":"咖啡店","lang":"zh","kind":"canonical"}],"summary":"The café where the terminal is returned."}
+{"id":"loc_street","kind":"location","names":[{"text":"街道","lang":"zh","kind":"canonical"}],"summary":"Seventh school district street, patrol route."}

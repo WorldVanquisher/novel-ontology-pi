@@ -1,0 +1,10 @@
+{"id":"rel_1","from":"be_meet","to":"be_promise","type":"NEXT","timeline":"canon"}
+{"id":"rel_2","from":"be_promise","to":"be_return","type":"NEXT","timeline":"canon"}
+{"id":"rel_3","from":"be_return","to":"be_evening","type":"NEXT","timeline":"canon"}
+{"id":"rel_4","from":"be_kept","to":"be_found","type":"NEXT","timeline":"branch_whatif"}
+{"id":"rel_5","from":"be_found","to":"be_parfait","type":"NEXT","timeline":"branch_whatif"}
+{"id":"rel_fork","from":"be_return","to":"be_kept","type":"FORKS_TO","timeline":"branch_whatif"}
+{"id":"rel_s1","from":"char_uiharu","to":"dlg_a1","type":"SPEAKS_IN","timeline":"canon"}
+{"id":"rel_s2","from":"char_mikoto","to":"dlg_a2","type":"SPEAKS_IN","timeline":"canon"}
+{"id":"rel_s3","from":"char_kuroko","to":"dlg_b1","type":"SPEAKS_IN","timeline":"canon"}
+{"id":"rel_x1","from":"dlg_b1","to":"char_mikoto","type":"ADDRESSES","timeline":"canon","note":"phone call across parallel chains"}

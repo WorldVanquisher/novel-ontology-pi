@@ -1,0 +1,11 @@
+{"id":"be_meet","timeline":"canon","summary":"美琴与黑子在咖啡店相遇","chapter":1,"importance":"big","contains":["scene_counter"]}
+{"id":"be_promise","timeline":"canon","summary":"约下次见面","chapter":1,"importance":"big","contains":[]}
+{"id":"be_return","timeline":"canon","summary":"在咖啡店寻回终端","chapter":2,"importance":"big","contains":["scene_counter","scene_patrol","dlg_a1","dlg_a2","dlg_b1","ev_found","ev_confirm","ev_patrol"]}
+{"id":"be_evening","timeline":"canon","summary":"三人傍晚集合","chapter":3,"importance":"big","contains":[]}
+{"id":"be_kept","timeline":"branch_whatif","summary":"终端未丢 (branch root)","chapter":2,"importance":"big","contains":[]}
+{"id":"be_found","timeline":"branch_whatif","summary":"寻回 — knitted live in session b0011","chapter":2,"importance":"big","contains":["b_scene_search","b_ev_ask"]}
+{"id":"be_parfait","timeline":"branch_whatif","summary":"芭菲之约","chapter":2,"importance":"big","contains":[]}
+{"id":"ev_found","timeline":"canon","summary":"发现终端","chapter":2,"importance":"small","scene":"scene_counter"}
+{"id":"ev_confirm","timeline":"canon","summary":"确认归属","chapter":2,"importance":"small","scene":"scene_counter"}
+{"id":"ev_patrol","timeline":"canon","summary":"街道巡查","chapter":2,"importance":"small","scene":"scene_patrol"}
+{"id":"b_ev_ask","timeline":"branch_whatif","summary":"沿街询问","chapter":2,"importance":"small","scene":"b_scene_search"}

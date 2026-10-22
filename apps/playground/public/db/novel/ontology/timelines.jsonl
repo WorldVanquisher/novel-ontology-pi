@@ -1,0 +1,2 @@
+{"id":"canon","kind":"canon","eventOrder":["be_meet","be_promise","be_return","be_evening"]}
+{"id":"branch_whatif","kind":"branch","forkFrom":"be_return","eventOrder":["be_kept","be_found","be_parfait"]}
