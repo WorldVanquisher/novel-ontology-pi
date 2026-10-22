@@ -1,6 +1,12 @@
 import { sectionBlock } from "../text/sectioning.js";
 import { Miniloop } from "../autostep/miniloop.js";
 import type { DecisionModel } from "../connectors/jev.js";
+import type { WorkModel } from "../connectors/llm.js";
+import type {
+  ExtractionInput,
+  ExtractionOutput,
+} from "../extraction/extraction.js";
+import { createCandidateRefiner, createExtractor } from "../extraction/extraction.js";
 import type { OntologyStore } from "../ontology/store.js";
 import type { Entity } from "../ontology/types.js";
 import type { ChangeSet } from "../merge/changeset.js";
@@ -18,8 +24,9 @@ export type ReviewDecision = "approved" | "held" | "revision_requested";
  *     1. section the block into sentences          (code)
  *     2. run the System 1 miniloop                 (Jev patches)
  *        -> accumulates a ChangeSet of proposals
- *     3. per-scene extraction with the work LLM    (TODO: extraction step)
- *        -> appends event/causality proposals to the same ChangeSet
+ *     3. per-scene extraction with the work LLM     (sector 08;
+ *        -> appends event/causality proposals        runs when a work
+ *        to the same ChangeSet                       model is wired)
  *     4. MERGE GATE: hand the ChangeSet to the main agent.
  *        - approved            -> apply to the main graph, next block
  *        - held                -> stop; nothing applied; awaiting the user
@@ -47,16 +54,32 @@ export class BlockProcessor {
        * provided, blocks start with an empty registry.
        */
       loadKnownEntities?: () => Promise<Entity[]>;
+      /**
+       * The work LLM. When provided, the extraction step (sector 08)
+       * runs between the miniloop and the merge gate, and the
+       * zero-context candidate refiner is available to the miniloop.
+       * When absent, blocks produce miniloop-only ChangeSets.
+       */
+      workModel?: WorkModel;
+      /** Distinct event/scene counts in the bundle, for ID/order sequencing. */
+      loadCounts?: () => Promise<{ events: number; scenes: number }>;
     } = {},
   ) {}
 
-  async processNovel(blocks: { blockId: string; text: string }[]): Promise<{
+  async processNovel(blocks: { blockId: string; text: string; chapterIndex?: number }[]): Promise<{
     mergedBlocks: string[];
     stoppedAt: string | null;
     stopReason: string | null;
   }> {
     const mergedBlocks: string[] = [];
-    const miniloop = new Miniloop(this.decisions);
+    const miniloop = new Miniloop(this.decisions, {
+      refineNameCandidates: this.observation.workModel
+        ? createCandidateRefiner(this.observation.workModel)
+        : undefined,
+    });
+    const extract = this.observation.workModel
+      ? createExtractor(this.observation.workModel)
+      : undefined;
     const emit = this.observation.emit ?? (this.observation.novelDir ? new EventLog(this.observation.novelDir).emit : undefined);
 
     for (const block of blocks) {
@@ -74,6 +97,27 @@ export class BlockProcessor {
           knownEntities,
           stateSummary: `Processing block ${block.blockId}.`,
         });
+        if (extract) {
+          // Sector 08: extraction reads the miniloop's structured
+          // scenes and returns the block's FINAL proposal list —
+          // stubs fleshed or dropped, aliases folded, events,
+          // relations and state changes appended — before anything
+          // is saved or shown to the gate.
+          const counts = this.observation.loadCounts
+            ? await this.observation.loadCounts()
+            : { events: 0, scenes: 0 };
+          const out: ExtractionOutput = await extract({
+            blockId: block.blockId,
+            chapterIndex: block.chapterIndex ?? 0,
+            sentences,
+            miniloop: result,
+            knownEntities,
+            proposals: result.changeset.proposals,
+            counts,
+          } satisfies ExtractionInput);
+          result.changeset.proposals = out.proposals;
+          Object.assign(result.changeset.reviewNotes, out.notes);
+        }
         if (this.observation.novelDir) await saveChangeSet(this.observation.novelDir, result.changeset);
         // No event emissions here: saveChangeSet is the emitter of record
         // for proposal.added / changeset.<status> — it fires them only

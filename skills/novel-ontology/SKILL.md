@@ -33,8 +33,9 @@ in plain language.
 Ingestion rolls **block by block** (a chapter, or a long block). For each
 block the CLI sections the text, runs the System 1 miniloop (decision
 patches: scene boundaries, dialogue, names, presence, speakers), extracts
-events per scene, and accumulates a **ChangeSet: proposed changes to the
-ontology main graph. Nothing is merged yet.**
+events per scene (the extraction step runs when `WORK_LLM_*` is
+configured; `--no-extract` disables it), and accumulates a **ChangeSet:
+proposed changes to the ontology main graph. Nothing is merged yet.**
 
 1. Run `novel ingest <novel-dir> <file>` and read the ChangeSet summary.
    By default the run stops at the first block's merge gate with the

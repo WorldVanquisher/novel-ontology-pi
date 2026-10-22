@@ -5,6 +5,7 @@ import { BlockProcessor, type ReviewDecision } from "../processing/blockProcesso
 import { BundleStore } from "../connectors/bundle.js";
 import { buildGraphFromBundle } from "../connectors/ladybug.js";
 import { jevFromEnv } from "../connectors/jev.js";
+import { workModelFromEnv, type HttpWorkModel } from "../connectors/workModel.js";
 import { resolveJevKey } from "../connectors/secrets.js";
 import { EventLog } from "../events/log.js";
 import type { Entity } from "../ontology/types.js";
@@ -16,6 +17,8 @@ export interface IngestOptions {
   maxBlocks?: number;
   /** Target block size in chars for the block cutter. */
   blockSize?: number;
+  /** Force the extraction step off even when a work LLM is configured. */
+  noExtract?: boolean;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -70,6 +73,25 @@ export async function ingestNovel(
     for (const e of rows) byId.set(e.id, e);
     return [...byId.values()];
   };
+  const loadCounts = async (): Promise<{ events: number; scenes: number }> => {
+    const events = await bundle.loadFile<{ id: string }>("events.jsonl");
+    const scenes = await bundle.loadFile<{ id: string }>("scenes.jsonl");
+    return {
+      events: new Set(events.map((e) => e.id)).size,
+      scenes: new Set(scenes.map((s) => s.id)).size,
+    };
+  };
+
+  // Extraction (sector 08) runs when a work LLM is configured and not
+  // explicitly disabled. Its absence is reported, never silent.
+  let workModel: HttpWorkModel | null = null;
+  if (!opts.noExtract) {
+    try {
+      workModel = workModelFromEnv(env);
+    } catch {
+      workModel = null;
+    }
+  }
 
   const review = async (): Promise<ReviewDecision> =>
     opts.autoApprove ? "approved" : "held";
@@ -78,10 +100,12 @@ export async function ingestNovel(
     novelDir,
     emit: log.emit,
     loadKnownEntities,
+    loadCounts,
+    workModel: workModel ?? undefined,
   });
 
   const result = await processor.processNovel(
-    blocks.map((b) => ({ blockId: b.id, text: b.text })),
+    blocks.map((b) => ({ blockId: b.id, text: b.text, chapterIndex: b.chapterIndex })),
   );
 
   let graph: Awaited<ReturnType<typeof buildGraphFromBundle>> | null = null;
@@ -98,6 +122,8 @@ export async function ingestNovel(
     novelDir,
     file,
     reviewMode: opts.autoApprove ? "auto-approve" : "gate",
+    extraction: workModel ? "live" : "off",
+    workModel: workModel?.modelId ?? null,
     blocksTotal: blocks.length,
     blocksInFile: allBlocks.length,
     mergedBlocks: result.mergedBlocks,

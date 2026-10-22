@@ -209,3 +209,125 @@ test("ingest refuses to run without a Jev key and points at jev login", async ()
   delete env.JEV_API_KEY_ENV;
   await assert.rejects(() => ingestNovel(dir, file, { env }), /Jev API key missing/);
 });
+
+/** Loopback OpenAI-compatible work-LLM mock for the extraction step. */
+async function startMockWorkLlm(): Promise<{ url: string; close: () => Promise<void> }> {
+  const server: Server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      const parsed = JSON.parse(body) as {
+        messages: { role: string; content: string }[];
+      };
+      const system = parsed.messages[0]?.content ?? "";
+      const user = parsed.messages[1]?.content ?? "";
+      let content: string;
+      if (system.includes("extract person names")) {
+        // Refiner: echo each nominated span back as its own name form.
+        content = user
+          .split("\n")
+          .map((line) => {
+            const m = line.match(/^(\d+)\. span: 「(.+?)」/);
+            return m ? `${m[1]}: ${m[2]}` : null;
+          })
+          .filter(Boolean)
+          .join("\n");
+      } else {
+        const ids = [...user.matchAll(/^(b\d+_s\d+):/gm)].map((m) => m[1]);
+        content = JSON.stringify({
+          locationName: null,
+          events: [
+            {
+              summaryEn: "Mikoto starts her day",
+              eventType: "action",
+              importance: 0.5,
+              actors: ["御坂美琴"],
+              affected: [],
+              evidence: ids.slice(0, 1),
+              causes: null,
+              stateChanges: [
+                { character: "御坂美琴", emotions: { determination: 0.4 }, knowledgeAdd: ["the day has begun"], goalsAdd: [], relationships: {}, location: null, possessionsAdd: [], possessionsRemove: [] },
+              ],
+            },
+            {
+              summaryEn: "Mikoto heads out",
+              eventType: "movement",
+              importance: 0.4,
+              actors: ["御坂美琴"],
+              affected: [],
+              evidence: ids.slice(1, 2),
+              causes: 0,
+              stateChanges: [],
+            },
+          ],
+          newEntities: [{ name: "白井黑子", kind: "Character", aliases: [] }],
+        });
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          choices: [{ message: { content } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      );
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const addr = server.address();
+  if (!addr || typeof addr === "string") throw new Error("mock work LLM: no address");
+  return {
+    url: `http://127.0.0.1:${addr.port}/v1`,
+    close: () => new Promise((r) => server.close(() => r())),
+  };
+}
+
+test("ingest with a work LLM runs extraction: the graph comes out non-empty", async () => {
+  const jev = await startMockJev();
+  const work = await startMockWorkLlm();
+  try {
+    const { dir, file } = await makeNovel();
+    const env = {
+      ...process.env,
+      TYPESAFE_API_KEY: FAKE_KEY,
+      JEV_ENDPOINT: jev.url,
+      NOVEL_SECRETS_DIR: join(dir, "secrets"),
+      WORK_LLM_API_KEY: ["sk", "test", "fake", "work"].join("-"),
+      WORK_LLM_BASE_URL: work.url,
+      WORK_LLM_MODEL: "test-model",
+    };
+    const result = await ingestNovel(dir, file, { autoApprove: true, env });
+    assert.equal(result.extraction, "live");
+    assert.equal(result.workModel, "test-model");
+    assert.deepEqual(result.mergedBlocks, ["b0001", "b0002"]);
+    assert.ok(result.graph);
+    // Seeded Mikoto + extraction-minted Kuroko; 2 events per block.
+    assert.equal(result.graph!.entities, 2);
+    assert.equal(result.graph!.events, 4);
+    assert.equal(result.graph!.scenes, 2);
+    assert.ok(result.graph!.relations >= 6, `relations: ${result.graph!.relations}`);
+
+    const changesets = await listChangeSets(dir);
+    const cs1 = changesets.find((c) => c.id === "cs_b0001")!;
+    const kinds = cs1.proposals.map((p) => p.kind);
+    assert.equal(kinds.filter((k) => k === "create_event").length, 2);
+    assert.ok(kinds.includes("create_scene"));
+    assert.ok(kinds.includes("set_state_change"));
+    assert.ok(
+      cs1.proposals.some(
+        (p) =>
+          p.kind === "upsert_entity" &&
+          (p.payload as { names: { text: string }[] }).names.some((n) => n.text === "白井黑子"),
+      ),
+      "Kuroko minted by extraction in block 1",
+    );
+    // Block 2 knows Kuroko from the bundle (cumulative registry across
+    // blocks in one run): no second mint, events resolve to her id.
+    const eventsRaw = await readFile(join(dir, "ontology", "events.jsonl"), "utf8");
+    const events = eventsRaw.trim().split("\n").map((l) => JSON.parse(l) as { chronologicalOrder: number; timelineId: string });
+    assert.deepEqual(events.map((e) => e.chronologicalOrder), [1, 2, 3, 4]);
+    assert.ok(events.every((e) => e.timelineId === "tl_canon"));
+  } finally {
+    await jev.close();
+    await work.close();
+  }
+});
