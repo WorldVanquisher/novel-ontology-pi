@@ -86,6 +86,28 @@ API, `TYPESAFE_API_KEY` + pinned `JEV_MODEL` for the decision model.
 Keys are user inputs — provide them via environment/secure entry, never
 commit them.
 
+## Work LLM smoke tests: `llm ping` / `llm probe`
+
+The work-LLM plumbing — an OpenAI-compatible chat-completions client
+(`src/connectors/workModel.ts`, configured from `WORK_LLM_*`) — can be
+exercised before any live wiring exists:
+
+```bash
+node dist/src/cli.js llm ping  --pretty   # one tiny completion: reachability + latency + token usage
+node dist/src/cli.js llm probe --pretty   # JSON-mode completion, reply validated as JSON
+```
+
+`WORK_LLM_BASE_URL` overrides the provider's default API root
+(deepseek: `https://api.deepseek.com/v1`, openai:
+`https://api.openai.com/v1`), so both commands can be pointed at a
+local mock server and run for free with a dummy `WORK_LLM_API_KEY`.
+The key is reported as status only (`configured`) and never printed.
+A missing key, model, or base URL is a specific error, not a silent
+skip. Transient failures (5xx, network) are retried with backoff;
+4xx is not retried; each attempt times out after 30s. These commands
+are plumbing only — the client is **not** wired into `ingest` yet;
+that step lands separately, with live keys.
+
 ## Sharing a novel: bundle export / import
 
 The JSONL bundle is the source of truth, so sharing a novel = moving the
