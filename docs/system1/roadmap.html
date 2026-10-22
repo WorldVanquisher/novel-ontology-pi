@@ -18,7 +18,7 @@ is decided earlier than it needs to be.</p>
 <div class="panel" style="border-color:var(--teal)">
   <b>Update rule:</b> this page is updated in GitHub <b>every time something is completed</b> —
   phase statuses and the decision log here are the project's progress record of truth.
-  <span style="color:var(--dim)">Last updated: 2026-10-21 · Phase 1 core implemented; sector 13 playground frontend v1 built and merged (PR #4); model wiring waits on keys.</span>
+  <span style="color:var(--dim)">Last updated: 2026-10-22 · Phase 1 COMPLETE: extraction merged (PR #14); gate-review tooling merged (PR #17). <b>First real live test done 2026-10-22</b> (Pi staffing the gate in the Codex setup; vol 1 prologue + ch 1–3, 6 blocks: 2,558 proposals applied, 594 deferred, 39 audited repairs) — PR #19 open with the report. Decisions #7–#9 recorded below. Sector 13 frontend runs live in hosted mode (PR #16, pending merge).</span>
 </div>
 
 <div class="rtl">
@@ -35,17 +35,17 @@ is decided earlier than it needs to be.</p>
   </div>
 
   <div class="rphase now">
-    <h3>Phase 1 — Live, end to end, on one test novel <span class="status now">● in progress</span></h3>
+    <h3>Phase 1 — Live, end to end, on one test novel <span class="status done">✓ done</span></h3>
     <ul>
       <li><b>Storage wiring</b> (10) <span class="status done">✓ done</span> — real Ladybug driver (<code>@ladybugdb/core</code>): schema DDL applied, bundle → graph build, parameterized Cypher</li>
       <li><b>Cypher-sufficiency experiment</b> (10) <span class="status done">✓ built</span> — graph-only retrieval layer: presence, co-presence, causal ancestors/descendants, scene location, character event streams, fork points. Embeddings DEFERRED until one of these provably falls short</li>
       <li><b>Block cutting</b> (01) <span class="status done">✓ done</span> — multilingual chapter detection + paragraph-boundary blocks (<code>novel blocks</code>)</li>
-      <li><b>Gate tooling</b> (09) <span class="status done">✓ done</span> — ChangeSet persistence + <code>changeset list|show|approve|hold</code>; approve applies to the bundle and rebuilds the graph (verified end to end in tests)</li>
-      <li><b>Model wiring</b> (07/08) — Jev client live; DeepSeek as the work LLM via the provider layer. <span style="color:var(--dim)">Plumbing landed 2026-10-21 (PR #8): OpenAI-compatible <code>HttpWorkModel</code> + <code>novel llm ping|probe</code>, mock-tested only. Jev side landed the same day (PR #11): the CLI holds its own secure key store (<code>novel jev login|status|logout|ping</code>, env → store → indirection resolution) and the JevClient speaks the real System One wire format — verified locally end to end against the live API. Ingest wiring landed the same evening (PR #13, merged): <code>novel ingest</code> runs blocks → miniloop → ChangeSets → merge gate → graph, the name registry is cumulative across blocks, and the test corpus (GT Index vols 1–2, zh-CN) is in hand locally. Remaining in Phase 1: the sector-08 extraction step (design pass with Qiguang).</span></li>
-      <li><b>Extraction step</b> (08) — per-scene LLM extraction inside the block processor</li>
+      <li><b>Gate tooling</b> (09) <span class="status done">✓ done</span> — ChangeSet persistence + <code>changeset list|show|approve|hold</code>; approve applies to the bundle and rebuilds the graph (verified end to end in tests). <span style="color:var(--dim)">Review toolkit landed 2026-10-22 (PR #17, merged): <code>novel match</code> (entity matching with a batched Jev checklist pre-review — only uncertain pairs reach the agent), audited pointwise <code>novel fix</code> (merge/rename/add-form/relate/unrelate/remove), and the recall protocol (<code>novel fix correct</code> pins + <code>novel recall</code>) — everything the main agent needs to staff the gate live.</span></li>
+      <li><b>Model wiring</b> (07/08) — Jev client live; DeepSeek as the work LLM via the provider layer. <span style="color:var(--dim)">Plumbing landed 2026-10-21 (PR #8): OpenAI-compatible <code>HttpWorkModel</code> + <code>novel llm ping|probe</code>, mock-tested only. Jev side landed the same day (PR #11): the CLI holds its own secure key store (<code>novel jev login|status|logout|ping</code>, env → store → indirection resolution) and the JevClient speaks the real System One wire format — verified locally end to end against the live API. Ingest wiring landed the same evening (PR #13, merged): <code>novel ingest</code> runs blocks → miniloop → ChangeSets → merge gate → graph, the name registry is cumulative across blocks, and the test corpus (GT Index vols 1–2, zh-CN) is in hand locally. Both API keys were received via Secure Vault and verified live the same evening. The final Phase-1 piece — extraction — landed 2026-10-22 (PR #14, merged; see below).</span></li>
+      <li><b>Extraction step</b> (08) <span class="status done">✓ done</span> — per-structured-scene work-LLM extraction inside the block processor (PR #14, merged 2026-10-22): English summaries + original-language evidence, CAUSES, six-dimension state deltas as gate-visible proposals, the sector-04 name pipeline completed (code nomination → zero-context refiner → one batched Jev judgment per block). Verified live on the real corpus: prologue blocks of both GT volumes produced held ChangeSets of ~130–390 proposals through real Jev + real DeepSeek.</li>
     </ul>
     <p class="mile">Milestone: one real chapter of Index → ChangeSet → main-agent review → merged into Ladybug → queried back.</p>
-    <p style="color:var(--dim);font-size:13px">Waiting on: Jev key handover (secure entry) · DeepSeek key · the Index corpus file. Remaining Phase-1 work is exactly the two items above without ✓.</p>
+    <p style="color:var(--dim);font-size:13px">Phase 1 milestone met 2026-10-22: real novel text → ChangeSets → merge gate → graph, watched live in the hosted frontend. First full gate exercise the same day: Pi itself staffed the gate over 6 blocks (prologue + chapters 1–3) with no auto-approve — 2,558 applied / 594 deferred / 39 audited repairs, report in PR #19. Next: state materialization (the deferred pile) and the remaining volumes.</p>
   </div>
 
   <div class="rphase">
@@ -95,10 +95,13 @@ is decided earlier than it needs to be.</p>
 <table class="dec">
   <tr><th style="width:36px">#</th><th>Decision</th><th>Choice</th><th style="width:150px">Status</th></tr>
   <tr><td>1</td><td>First test novel</td><td>Re-ingest the legacy <i>Index</i> corpus</td><td><span class="status done">✓ decided</span></td></tr>
-  <tr><td>2</td><td>Jev access</td><td>He has an API; route settled at handover</td><td><span class="status now">key pending</span></td></tr>
+  <tr><td>2</td><td>Jev access</td><td>His own TypeSafe/Jev API, via the CLI secure store (PR #11); verified live 2026-10-21</td><td><span class="status done">✓ decided</span></td></tr>
   <tr><td>3</td><td>Work LLM for testing</td><td>DeepSeek API (his), via the Pi provider layer</td><td><span class="status done">✓ decided</span></td></tr>
   <tr><td>4</td><td>Embedding model</td><td><b>Deferred</b> (revised 2026-10-21): graph-first — verify relational Cypher can't satisfy our needs before adding any embedding model. Fallback if needed: lightweight local CPU model (~500–1000 dims), vector recall top-32 → Jev post-selection</td><td><span class="status plan">deferred</span></td></tr>
   <tr><td>5</td><td>Name-candidate generation</td><td>Hybrid: plain-text scan against a <b>cumulative registry of every name ever seen in this novel</b>; a new candidate triggers a <b>zero-context LLM call</b> to extract the new name</td><td><span class="status done">✓ decided</span></td></tr>
+  <tr><td>7</td><td>Language policy (2026-10-22)</td><td><b>Content always in the novel's original language</b> — summaries, state facts, names, everything user-facing derived from the novel (the reader prefers the original language). Intermediate process (review, reasoning, internal notes) may be English. <code>summaryEn</code> is a legacy key name.</td><td><span class="status done">✓ decided</span></td></tr>
+  <tr><td>8</td><td>Transient characters (2026-10-22)</td><td>Do <b>not</b> mint entities for transient, unnamed figures — a random animal, a passing worker, an unnamed "him" — when the reviewing agent judges them transient. <b>Exception:</b> a figure clearly being set up (mysterious person, later identity reveal, signaled by a major descriptive block) is kept as an entity. Generalizes the "no animal nodes" line from the first live test.</td><td><span class="status now">direction recorded — general rule later</span></td></tr>
+  <tr><td>9</td><td>Presence layering (2026-10-22)</td><td><b>Official:</b> Jev proposes presence per window → extraction refines present/mentioned per scene → the reviewing agent breaks ties (e.g. mentioned-only revisions). "Mentioned" requires an actual name hit in the window, never mere non-presence.</td><td><span class="status done">✓ decided</span></td></tr>
   <tr><td>6</td><td>Playground frontend (sector 13)</td><td><b>Reagraph</b> (React, true 3D, clustering/badges built in) + React Flow pipeline strip; <b>standalone-first, host-agnostic</b> — a VS Code webview wrap stays possible later; extension-host research concluded no existing app provides this for free</td><td><span class="status done">✓ decided</span></td></tr>
 </table>
 
@@ -112,7 +115,7 @@ is decided earlier than it needs to be.</p>
 </ul>
 
 <div class="pager" id="pager"></div>
-<footer>novel-ontology-pi · design dashboard · roadmap v0.2 · updated 2026-10-21</footer>
+<footer>novel-ontology-pi · design dashboard · roadmap v0.2 · updated 2026-10-22</footer>
 </div>
 <script src="assets/sector.js"></script>
 </body>
