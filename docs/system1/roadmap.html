@@ -18,7 +18,7 @@ is decided earlier than it needs to be.</p>
 <div class="panel" style="border-color:var(--teal)">
   <b>Update rule:</b> this page is updated in GitHub <b>every time something is completed</b> —
   phase statuses and the decision log here are the project's progress record of truth.
-  <span style="color:var(--dim)">Last updated: 2026-10-22 · Phase 1 COMPLETE: extraction merged (PR #14); gate-review tooling merged (PR #17). <b>First real live test done 2026-10-22</b> (Pi staffing the gate in the Codex setup; vol 1 prologue + ch 1–3, 6 blocks: 2,558 proposals applied, 594 deferred, 39 audited repairs) — PR #19 open with the report. Decisions #7–#9 recorded below. Sector 13 frontend runs live in hosted mode (PR #16, pending merge).</span>
+  <span style="color:var(--dim)">Last updated: 2026-10-22 · Phase 1 COMPLETE: extraction merged (PR #14); gate-review tooling merged (PR #17). <b>First real live test done 2026-10-22</b> (Pi staffing the gate in the Codex setup; vol 1 prologue + ch 1–3, 6 blocks: 2,558 proposals applied, 594 deferred, 39 audited repairs) — PR #19 open with the report. Decisions #7–#10 recorded below. PR #19 merged 2026-10-22 (review/repair system + first live test report); PR #15 closed as superseded by #17; PR #16 closed — the frontend live view will be rebuilt on the working-draft stream. Sector 13 frontend runs live in hosted mode (PR #16, pending merge).</span>
 </div>
 
 <div class="rtl">
@@ -74,7 +74,7 @@ is decided earlier than it needs to be.</p>
     <h3>Phase 4 — The use phase <span class="status plan">planned</span></h3>
     <ul>
       <li><b>Timelines &amp; forking</b> (11): fork-point browser, branch creation, pinned state snapshots, divergence scoring</li>
-      <li><b>Simulation v1</b> (12): one character, folded state, voice from their own turns, Jev referee in flag-only mode</li>
+      <li><b>Simulation v1</b> (12): one character, folded state, voice from their own turns, Jev referee in flag-only mode. <span style="color:var(--dim)">Design ratified 2026-10-22 (decision #10): every character is a state machine — their state (emotion, knowledge, goals, relationships, location, possessions) is a chain over the timeline, folded deterministically from canon deltas up to any time point; the stochastic element enters only when simulation generates forward from a folded snapshot at a fork.</span></li>
     </ul>
     <p class="mile">Milestone: pick a time point, fork the world, talk to someone who lives there.</p>
   </div>
@@ -102,6 +102,7 @@ is decided earlier than it needs to be.</p>
   <tr><td>7</td><td>Language policy (2026-10-22)</td><td><b>Content always in the novel's original language</b> — summaries, state facts, names, everything user-facing derived from the novel (the reader prefers the original language). Intermediate process (review, reasoning, internal notes) may be English. <code>summaryEn</code> is a legacy key name.</td><td><span class="status done">✓ decided</span></td></tr>
   <tr><td>8</td><td>Transient characters (2026-10-22)</td><td>Do <b>not</b> mint entities for transient, unnamed figures — a random animal, a passing worker, an unnamed "him" — when the reviewing agent judges them transient. <b>Exception:</b> a figure clearly being set up (mysterious person, later identity reveal, signaled by a major descriptive block) is kept as an entity. Generalizes the "no animal nodes" line from the first live test.</td><td><span class="status now">direction recorded — general rule later</span></td></tr>
   <tr><td>9</td><td>Presence layering (2026-10-22)</td><td><b>Official:</b> Jev proposes presence per window → extraction refines present/mentioned per scene → the reviewing agent breaks ties (e.g. mentioned-only revisions). "Mentioned" requires an actual name hit in the window, never mere non-presence.</td><td><span class="status done">✓ decided</span></td></tr>
+  <tr><td>10</td><td>Character state model (2026-10-22)</td><td><b>Every character is a state machine:</b> state (six dimensions from sector 08) evolves as a chain over chronological time — state at any point = the deterministic fold of all canon state deltas up to that point. Folding canon is <b>not</b> stochastic (it happened); stochastic sampling enters only in simulation, generating forward from a folded snapshot (Phase 4). Materializing the deferred <code>set_state_change</code> proposals into this chain is the prerequisite build.</td><td><span class="status done">✓ decided</span></td></tr>
   <tr><td>6</td><td>Playground frontend (sector 13)</td><td><b>Reagraph</b> (React, true 3D, clustering/badges built in) + React Flow pipeline strip; <b>standalone-first, host-agnostic</b> — a VS Code webview wrap stays possible later; extension-host research concluded no existing app provides this for free</td><td><span class="status done">✓ decided</span></td></tr>
 </table>
 
