@@ -21,6 +21,13 @@ import {
   DEFAULT_SEARCH_LIMIT,
 } from "./commands/queryCommands.js";
 import { llmPing, llmProbe } from "./commands/llmCommands.js";
+import {
+  jevLogin,
+  jevLogout,
+  jevPing,
+  jevStatus,
+} from "./commands/jevCommands.js";
+import { resolveJevKey } from "./connectors/secrets.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
 import { initWorkspace } from "./workspace/init.js";
@@ -60,7 +67,11 @@ const COMMANDS: Record<string, string> = {
   "novel graph reindex": "Deferred: no vector/FTS indexes in the graph-first phase",
   "novel llm ping": "Work-LLM smoke test: one tiny completion (reachability, latency, usage)",
   "novel llm probe": "Work-LLM smoke test: JSON-mode reply, validated",
-  "novel config": "Show model routing config (keys via env / secure entry only)",
+  "novel jev login [--from-env]": "Store the Jev key in the secure store (hidden prompt; never printed)",
+  "novel jev status": "Jev key status: source only (env / secure store / indirection), never the value",
+  "novel jev logout": "Remove the Jev key from the secure store",
+  "novel jev ping": "Jev smoke test: one tiny live decision via the resolved key",
+  "novel config": "Show model routing config (keys via env / secure store only)",
 };
 
 function out(obj: unknown, pretty: boolean): void {
@@ -102,8 +113,40 @@ async function main(): Promise<void> {
   }
 
   if (cmd === "config") {
-    out(loadConfig(), pretty);
+    const resolved = resolveJevKey();
+    out(
+      loadConfig(process.env, {
+        jevKeySource:
+          resolved && resolved.source !== "env" ? resolved.source : null,
+      }),
+      pretty,
+    );
     return;
+  }
+
+  if (cmd === "jev") {
+    if (sub === "login") {
+      out(
+        await jevLogin(process.env, {
+          fromEnv: positional.includes("--from-env"),
+        }),
+        pretty,
+      );
+      return;
+    }
+    if (sub === "status") {
+      out(jevStatus(), pretty);
+      return;
+    }
+    if (sub === "logout") {
+      out(jevLogout(), pretty);
+      return;
+    }
+    if (sub === "ping") {
+      out(await jevPing(), pretty);
+      return;
+    }
+    throw new Error("Usage: novel jev login|status|logout|ping");
   }
 
   if (cmd === "llm") {
