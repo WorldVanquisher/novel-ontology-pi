@@ -33,7 +33,7 @@ import {
 } from "./commands/jevCommands.js";
 import { resolveJevKey } from "./connectors/secrets.js";
 import { inspectNovel } from "./commands/inspectCommands.js";
-import { evalRun } from "./commands/evalCommands.js";
+import { evalExtract, evalRun } from "./commands/evalCommands.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
 import { initWorkspace } from "./workspace/init.js";
@@ -95,6 +95,8 @@ const COMMANDS: Record<string, string> = {
     "Corpus diagnostics over a novel bundle (counts, coverage, integrity tallies — no judgments)",
   "novel eval run <dataset-dir> <predictions-dir>":
     "Score prediction files against a golden-chapter dataset (precision/recall; metrics only, no thresholds)",
+  "novel eval extract <novel-dir> <predictions-dir>":
+    "Project an ingested bundle's ontology into a per-chapter predictions dir for eval run (records as stored; no model calls)",
   "novel config": "Show model routing config (keys via env / secure store only)",
 };
 
@@ -198,7 +200,11 @@ async function main(): Promise<void> {
       out(await evalRun(positional[2], positional[3]), pretty);
       return;
     }
-    throw new Error("Usage: novel eval run <dataset-dir> <predictions-dir>");
+    if (sub === "extract" && positional[2] && positional[3]) {
+      out(await evalExtract(positional[2], positional[3]), pretty);
+      return;
+    }
+    throw new Error("Usage: novel eval run <dataset-dir> <predictions-dir> | novel eval extract <novel-dir> <predictions-dir>");
   }
 
   if (cmd === "watch") {

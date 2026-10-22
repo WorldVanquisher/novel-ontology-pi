@@ -1,5 +1,7 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { BundleStore } from "../connectors/bundle.js";
+import type { Entity, OntEvent, Relation, Scene } from "../ontology/types.js";
 
 /**
  * `novel eval run <dataset-dir> <predictions-dir>` — golden-chapter eval
@@ -36,6 +38,14 @@ import { join, resolve } from "node:path";
  *   Matching is a multiset match: duplicate keys pair off one-for-one.
  * Ids are otherwise ignored — producers assign their own, so semantic
  * keys are what make independently produced predictions comparable.
+ *
+ * `novel eval extract <novel-dir> <predictions-dir>` (evalExtract,
+ * below) is the bundle-side producer for the runner: it projects an
+ * ingested novel bundle's stored ontology into a predictions directory,
+ * split per chapter, so a real ingest can be scored against a golden
+ * dataset. Chapter attribution uses only stored fields (see
+ * evalExtract); records that no stored field ties to a chapter are
+ * counted in the report, never silently dropped or guessed at.
  */
 
 export const EVAL_KINDS = ["entities", "relations", "events"] as const;
@@ -447,6 +457,233 @@ export async function evalRun(datasetDirArg: string, predictionsDirArg: string):
     chapters: chapterResults,
     missed: missed.sort(byKey),
     spurious: spurious.sort(byKey),
+  };
+}
+
+// ---------------------------------------------------------------------
+// Bundle → predictions adapter (`novel eval extract`)
+// ---------------------------------------------------------------------
+
+export interface EvalExtractChapter {
+  /** Chapter folder name in the predictions dir (see CHAPTER_ID_RULE). */
+  id: string;
+  chapterIndex: number;
+  entities: number;
+  relations: number;
+  events: number;
+}
+
+export interface EvalExtractResult {
+  novelDir: string;
+  predictionsDir: string;
+  chapterIdRule: string;
+  chapters: EvalExtractChapter[];
+  /** Records written, summed over chapter folders (a record attributed
+   *  to two chapters is written — and counted — in both). */
+  written: Record<EvalKind, number>;
+  /** Stored records attributed to no chapter: counted here, written
+   *  nowhere. Nothing is dropped silently. */
+  unattributed: Record<EvalKind, number>;
+}
+
+const CHAPTER_ID_RULE =
+  "chapter folders are named ch<NN> where NN is the stored chapterIndex " +
+  "zero-padded to 2 digits (ch01, ch02, …); name dataset chapters the same way";
+
+/** Chapter folder id for a stored chapterIndex: 1 → "ch01", 2 → "ch02". */
+export function chapterFolderId(chapterIndex: number): string {
+  return `ch${String(chapterIndex).padStart(2, "0")}`;
+}
+
+/**
+ * Project an ingested bundle's ontology into an eval predictions dir.
+ *
+ * Records are copied exactly as stored (ids and every field the matcher
+ * uses are preserved verbatim); the only work is the per-chapter split,
+ * which uses stored fields only:
+ *   events    — their own `chapterIndex`.
+ *   entities  — entities carry no chapter field; an entity is projected
+ *               into every chapter where a stored scene or event places
+ *               it: scene charactersPresent / charactersMentioned /
+ *               locationId / dialogue-turn speaker & addressee ids, and
+ *               event primaryActors / affectedCharacters.
+ *   relations — relations carry no chapter field either; a relation is
+ *               projected into the chapters BOTH endpoints are placed
+ *               in (an endpoint that is an event or scene id resolves
+ *               to that record's chapterIndex; an entity endpoint to
+ *               its attested chapters, as above). A cross-chapter
+ *               relation (e.g. PRECEDES between two chapters' events)
+ *               therefore lands in neither chapter.
+ * Records no stored field ties to a chapter are counted under
+ * `unattributed` in the report — never guessed at, never dropped
+ * silently. The bundle files are read with BundleStore.loadFile, the
+ * codebase-standard loader (missing file → no records; a corrupt line
+ * is an error naming the file and line). The bundle is append-only
+ * with last-write-wins upserts, so entities/events/scenes are deduped
+ * by id (last row wins — the same rule the ingest registry uses);
+ * relations carry no id and are kept as stored.
+ */
+export async function evalExtract(
+  novelDirArg: string,
+  predictionsDirArg: string,
+): Promise<EvalExtractResult> {
+  const novelDir = resolve(novelDirArg);
+  const dirStat = await stat(novelDir).catch(() => null);
+  if (!dirStat?.isDirectory()) {
+    throw new Error(`novel directory not found: ${novelDirArg}`);
+  }
+  const ontologyDir = join(novelDir, "ontology");
+  const manifestStat = await stat(join(ontologyDir, "manifest.json")).catch(() => null);
+  if (!manifestStat?.isFile()) {
+    throw new Error(
+      `${novelDirArg} is not a novel workspace (missing ontology/manifest.json). Run \`novel init ${novelDirArg}\` first.`,
+    );
+  }
+
+  // Never write into a non-empty target: stale chapter files from an
+  // earlier projection would silently corrupt the scores (the same
+  // never-overwrite rule as bundle import).
+  const predictionsDir = resolve(predictionsDirArg);
+  const existing = await readdir(predictionsDir).catch(() => null);
+  if (existing !== null && existing.length > 0) {
+    throw new Error(
+      `predictions directory already exists and is not empty: ${predictionsDirArg} — refusing to overwrite; remove it or choose a new directory`,
+    );
+  }
+
+  const bundle = new BundleStore(ontologyDir);
+  const dedupeById = <T extends { id: string }>(rows: T[]): T[] => {
+    const byId = new Map<string, T>();
+    for (const r of rows) byId.set(r.id, r);
+    return [...byId.values()];
+  };
+  const entities = dedupeById(await bundle.loadFile<Entity>("entities.jsonl"));
+  const events = dedupeById(await bundle.loadFile<OntEvent>("events.jsonl"));
+  const scenes = dedupeById(await bundle.loadFile<Scene>("scenes.jsonl"));
+  const relations = await bundle.loadFile<Relation>("relations.jsonl");
+
+  const chapterOf = (rec: { chapterIndex?: unknown }): number | null =>
+    typeof rec.chapterIndex === "number" && Number.isInteger(rec.chapterIndex)
+      ? rec.chapterIndex
+      : null;
+
+  const eventChapter = new Map<string, number>();
+  for (const ev of events) {
+    const ch = chapterOf(ev);
+    if (ch !== null) eventChapter.set(ev.id, ch);
+  }
+  const sceneChapter = new Map<string, number>();
+  for (const sc of scenes) {
+    const ch = chapterOf(sc);
+    if (ch !== null) sceneChapter.set(sc.id, ch);
+  }
+
+  // Entity attestation: the chapters stored scenes/events place the
+  // entity in. Entities have no chapter field of their own.
+  const entityChapters = new Map<string, Set<number>>();
+  const attest = (id: unknown, ch: number | null): void => {
+    if (typeof id !== "string" || id === "" || ch === null) return;
+    const set = entityChapters.get(id) ?? new Set<number>();
+    set.add(ch);
+    entityChapters.set(id, set);
+  };
+  for (const sc of scenes) {
+    const ch = chapterOf(sc);
+    for (const id of sc.charactersPresent ?? []) attest(id, ch);
+    for (const id of sc.charactersMentioned ?? []) attest(id, ch);
+    attest(sc.locationId, ch);
+    for (const turn of sc.turns ?? []) {
+      attest(turn.speakerId, ch);
+      attest(turn.addresseeId, ch);
+    }
+  }
+  for (const ev of events) {
+    const ch = chapterOf(ev);
+    for (const id of ev.primaryActors ?? []) attest(id, ch);
+    for (const id of ev.affectedCharacters ?? []) attest(id, ch);
+  }
+  // Scene/Event-kind rows are also stored as entities; an entity whose
+  // id is a scene or event id sits in that record's chapter.
+  for (const e of entities) {
+    if (eventChapter.has(e.id)) attest(e.id, eventChapter.get(e.id)!);
+    if (sceneChapter.has(e.id)) attest(e.id, sceneChapter.get(e.id)!);
+  }
+
+  const endpointChapters = (id: string): Set<number> => {
+    if (eventChapter.has(id)) return new Set([eventChapter.get(id)!]);
+    if (sceneChapter.has(id)) return new Set([sceneChapter.get(id)!]);
+    return entityChapters.get(id) ?? new Set<number>();
+  };
+
+  interface Buckets {
+    entities: Entity[];
+    relations: Relation[];
+    events: OntEvent[];
+  }
+  const buckets = new Map<number, Buckets>();
+  const bucket = (ch: number): Buckets => {
+    const b = buckets.get(ch) ?? { entities: [], relations: [], events: [] };
+    buckets.set(ch, b);
+    return b;
+  };
+
+  let unattributedEvents = 0;
+  for (const ev of events) {
+    const ch = chapterOf(ev);
+    if (ch === null) unattributedEvents++;
+    else bucket(ch).events.push(ev);
+  }
+  let unattributedEntities = 0;
+  for (const e of entities) {
+    const chs = entityChapters.get(e.id);
+    if (!chs || chs.size === 0) unattributedEntities++;
+    else for (const ch of chs) bucket(ch).entities.push(e);
+  }
+  let unattributedRelations = 0;
+  for (const r of relations) {
+    const from = endpointChapters(r.fromId);
+    const both = [...endpointChapters(r.toId)].filter((ch) => from.has(ch));
+    if (both.length === 0) unattributedRelations++;
+    else for (const ch of both) bucket(ch).relations.push(r);
+  }
+
+  const jsonl = (rows: unknown[]): string =>
+    rows.length === 0 ? "" : rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
+
+  await mkdir(predictionsDir, { recursive: true });
+  const chapters: EvalExtractChapter[] = [];
+  const written: Record<EvalKind, number> = { entities: 0, relations: 0, events: 0 };
+  for (const ch of [...buckets.keys()].sort((a, b) => a - b)) {
+    const b = buckets.get(ch)!;
+    const id = chapterFolderId(ch);
+    const dir = join(predictionsDir, id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "entities.jsonl"), jsonl(b.entities));
+    await writeFile(join(dir, "relations.jsonl"), jsonl(b.relations));
+    await writeFile(join(dir, "events.jsonl"), jsonl(b.events));
+    written.entities += b.entities.length;
+    written.relations += b.relations.length;
+    written.events += b.events.length;
+    chapters.push({
+      id,
+      chapterIndex: ch,
+      entities: b.entities.length,
+      relations: b.relations.length,
+      events: b.events.length,
+    });
+  }
+
+  return {
+    novelDir: novelDirArg,
+    predictionsDir: predictionsDirArg,
+    chapterIdRule: CHAPTER_ID_RULE,
+    chapters,
+    written,
+    unattributed: {
+      entities: unattributedEntities,
+      relations: unattributedRelations,
+      events: unattributedEvents,
+    },
   };
 }
 

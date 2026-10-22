@@ -210,6 +210,38 @@ nothing was predicted for a slice; recall is `null` when the slice
 has no golden records. A completed scoring run exits 0 whatever the
 numbers are — non-zero exits mean usage, IO, or format errors only.
 
+### `novel eval extract <novel-dir> <predictions-dir>` — predictions from a bundle
+
+`eval run` scores predictions as data; `eval extract` is the producer
+that makes them from a real ingest. It projects the bundle's stored
+ontology (`ontology/entities.jsonl`, `relations.jsonl`,
+`events.jsonl`) into a predictions directory in exactly the format
+above — records copied as stored, ids included — split per chapter.
+No model calls.
+
+Chapter folders are named `ch<NN>`, where NN is the stored
+`chapterIndex` zero-padded to two digits (`ch01`, `ch02`, …); name a
+dataset's chapters the same way so the runner lines them up.
+
+Only events and scenes carry a `chapterIndex`, so the split uses
+stored fields only:
+
+- **events** go to their own `chapterIndex`;
+- **entities** carry no chapter field, so an entity is projected into
+  every chapter where a stored scene or event places it (scene
+  presence/mentions/location/dialogue turns; event primary actors /
+  affected characters);
+- **relations** carry no chapter field either, so a relation is
+  projected into the chapters *both* endpoints are placed in — a
+  relation spanning two chapters (say, a `PRECEDES` between their
+  events) lands in neither.
+
+Records no stored field ties to a chapter are counted as
+`unattributed` in the command's report — never guessed at, never
+silently dropped. The target directory must not already hold files:
+like bundle import, the adapter never overwrites, so a stale
+projection cannot corrupt a score.
+
 ## Sharing a novel: bundle export / import
 
 The JSONL bundle is the source of truth, so sharing a novel = moving the
