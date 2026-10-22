@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { arrangeTimeline } from "../apps/playground/src/data/timelineLayout.js";
+import { arrangeTimeline, withOverviewActivity } from "../apps/playground/src/data/timelineLayout.js";
 import type { WorldEdge, WorldNode } from "../apps/playground/src/types.js";
 
 function record(id: string, chrono: number, kind: WorldNode["kind"] = "event", lane: WorldNode["lane"] = "canon"): WorldNode {
@@ -51,4 +51,30 @@ test("cycles and shared character references do not recursively duplicate timeli
   assert.equal(new Set(result.nodes.map((node) => node.id)).size, nodes.length);
   assert.notDeepEqual(result.nodes[2].interiorPos, result.nodes[3].interiorPos);
   assert.deepEqual(arrangeTimeline([], [], true), { nodes: [], tracks: [] });
+});
+
+test("overview ghosts and their parent tethers stay visible without moving chapter tracks", () => {
+  const chapters = [record("canon", 1, "bigEvent"), record("branch", 1, "bigEvent", "branch"), record("later", 2, "bigEvent", "branch")];
+  const chapterEdges = [relation("canon", "branch", "cross"), relation("branch", "later")];
+  const ghosts: WorldNode[] = [record("person", 3, "character", "branch"), record("dialogue", 3.5, "dialogue", "branch"), record("event", 4, "event", "branch")]
+    .map((node) => ({ ...node, parent: "branch", state: "proposed" }));
+  ghosts[2] = { ...ghosts[2], state: "held" };
+  const activityEdges = [relation("person", "dialogue", "speaks"), relation("dialogue", "event"), relation("hidden-interior", "dialogue")];
+  const original = structuredClone({ chapters, chapterEdges, ghosts, activityEdges });
+  const combined = withOverviewActivity(chapters, chapterEdges, ghosts, activityEdges);
+  const result = arrangeTimeline(combined.nodes, combined.edges, false);
+  const baseline = arrangeTimeline(chapters, chapterEdges, false);
+  assert.equal(combined.nodes.length, 6);
+  assert.equal(combined.edges.filter((edge) => edge.id.startsWith("overview-parent:")).length, 3);
+  assert.equal(combined.edges.find((edge) => edge.to === "event" && edge.kind === "contains")?.state, "held");
+  assert.ok(combined.edges.some((edge) => edge.from === "person" && edge.to === "dialogue"));
+  assert.ok(combined.edges.every((edge) => combined.nodes.some((node) => node.id === edge.from) && combined.nodes.some((node) => node.id === edge.to)));
+  assert.deepEqual(result.tracks, baseline.tracks);
+  for (const chapter of baseline.nodes) assert.deepEqual(result.nodes.find((node) => node.id === chapter.id)?.lanePos, chapter.lanePos);
+  const positions = result.nodes.filter((node) => node.parent).map((node) => node.lanePos);
+  assert.equal(new Set(positions.map((position) => position.join(","))).size, 3);
+  assert.deepEqual({ chapters, chapterEdges, ghosts, activityEdges }, original);
+  const afterMerge = withOverviewActivity(chapters, chapterEdges, ghosts.map((node) => node.state === "held" ? node : { ...node, state: "canon" }), activityEdges);
+  assert.equal(afterMerge.nodes.find((node) => node.id === "person")?.state, "canon");
+  assert.equal(afterMerge.edges.find((edge) => edge.id === "overview-parent:event")?.state, "held");
 });

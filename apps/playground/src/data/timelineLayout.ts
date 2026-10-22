@@ -10,9 +10,10 @@ export interface TimelineTrack {
 
 export function arrangeTimeline(nodes: WorldNode[], edges: WorldEdge[], interior: boolean): { nodes: WorldNode[]; tracks: TimelineTrack[] } {
   const groups: { id: string; label: string; lane: WorldNode["lane"]; records: WorldNode[] }[] = [];
+  const attached = new Set(interior ? [] : nodes.filter((node) => node.parent && nodes.some((parent) => parent.id === node.parent && !parent.parent)).map((node) => node.id));
   if (!interior) {
     for (const lane of ["canon", "branch"] as const) {
-      const records = nodes.filter((node) => node.lane === lane).sort((first, second) => first.chrono - second.chrono);
+      const records = nodes.filter((node) => node.lane === lane && !attached.has(node.id)).sort((first, second) => first.chrono - second.chrono);
       if (records.length) groups.push({ id: lane, label: lane === "canon" ? "Canon" : "Branch", lane, records });
     }
   } else {
@@ -53,8 +54,16 @@ export function arrangeTimeline(nodes: WorldNode[], edges: WorldEdge[], interior
     const forkLabel = !interior && source ? nodes.find((node) => node.id === source.from)?.label : null;
     tracks.push({ id: group.id, label: `${String(index + 1).padStart(2, "0")} / ${group.label}${forkLabel ? ` · from ${forkLabel}` : ""}`, lane: group.lane, start: [Math.min(...horizontal) - 70, vertical, -15], end: [Math.max(...horizontal) + 85, vertical, -15] });
   });
+  const attachments = new Map<string, number>();
+  for (const node of nodes.filter((record) => attached.has(record.id))) {
+    const parent = coordinates.get(node.parent!)!;
+    const slot = attachments.get(node.parent!) ?? 0;
+    attachments.set(node.parent!, slot + 1);
+    coordinates.set(node.id, [parent[0] + (slot % 3 - 1) * 92, parent[1] + 100 + Math.floor(slot / 3) * 65, 30]);
+  }
   const occupied = new Map<string, number>();
   for (const character of nodes.filter((node) => node.kind === "character")) {
+    if (attached.has(character.id)) continue;
     const references = edges.filter((edge) => edge.from === character.id || edge.to === character.id)
       .map((edge) => nodes.find((node) => node.id === (edge.from === character.id ? edge.to : edge.from)))
       .filter((node): node is WorldNode => !!node && coordinates.has(node.id))
@@ -66,7 +75,7 @@ export function arrangeTimeline(nodes: WorldNode[], edges: WorldEdge[], interior
     occupied.set(key, level + 1);
     coordinates.set(character.id, [position[0], position[1] + 82 + level * 48, 12]);
   }
-  const horizontal = [...coordinates.values()].map((position) => position[0]);
+  const horizontal = [...coordinates.entries()].filter(([id]) => !attached.has(id)).map(([, position]) => position[0]);
   const center = horizontal.length ? (Math.min(...horizontal) + Math.max(...horizontal)) / 2 : 0;
   return {
     nodes: nodes.map((node) => {
@@ -76,4 +85,15 @@ export function arrangeTimeline(nodes: WorldNode[], edges: WorldEdge[], interior
     }),
     tracks: tracks.map((track) => ({ ...track, start: [track.start[0] - center, track.start[1], track.start[2]], end: [track.end[0] - center, track.end[1], track.end[2]] })),
   };
+}
+
+export function withOverviewActivity(laneNodes: WorldNode[], laneEdges: WorldEdge[], activityNodes: WorldNode[], activityEdges: WorldEdge[]): { nodes: WorldNode[]; edges: WorldEdge[] } {
+  const nodes = [...laneNodes, ...activityNodes];
+  const ids = new Set(nodes.map((node) => node.id));
+  const edges = [...laneEdges, ...activityEdges].filter((edge) => ids.has(edge.from) && ids.has(edge.to));
+  for (const node of activityNodes) {
+    if (!node.parent || !ids.has(node.parent) || edges.some((edge) => edge.from === node.parent && edge.to === node.id)) continue;
+    edges.push({ id: `overview-parent:${node.id}`, from: node.parent, to: node.id, kind: "contains", state: node.state, parent: node.parent });
+  }
+  return { nodes, edges };
 }

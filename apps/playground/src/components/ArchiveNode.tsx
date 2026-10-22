@@ -16,8 +16,9 @@ export function ArchiveNode({ node, selected, active }: NodeRendererProps) {
       <group position={[0, raised ? 12 : 0, raised ? 35 : 0]}>
         <mesh>
           <sphereGeometry args={[57, 36, 24]} />
-          <meshStandardMaterial color={accent} metalness={0.22} roughness={0.43} transparent opacity={world.state === "proposed" ? 0.7 : 1} />
+          <meshStandardMaterial color={accent} metalness={0.22} roughness={0.43} transparent opacity={world.state === "proposed" ? 0.38 : world.state === "held" ? 0.6 : 1} depthWrite={world.state === "canon"} />
         </mesh>
+        {world.state !== "canon" && <mesh><sphereGeometry args={[59, 12, 8]} /><meshBasicMaterial color={accent} wireframe transparent opacity={0.45} /></mesh>}
         {raised && <mesh rotation={[Math.PI / 2.5, 0.2, 0]}>
           <torusGeometry args={[71, 1.4, 8, 64]} />
           <meshBasicMaterial color={accent} />
@@ -33,8 +34,9 @@ export function ArchiveNode({ node, selected, active }: NodeRendererProps) {
       </mesh>
       <mesh>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={paper} roughness={0.86} transparent opacity={world.state === "proposed" ? 0.78 : 1} />
+        <meshStandardMaterial color={paper} roughness={0.86} transparent opacity={world.state === "proposed" ? 0.4 : world.state === "held" ? 0.65 : 1} depthWrite={world.state === "canon"} />
       </mesh>
+      {world.state !== "canon" && <mesh><boxGeometry args={[width + 2, height + 2, depth + 2]} /><meshBasicMaterial color={accent} wireframe transparent opacity={0.55} /></mesh>}
       <mesh position={[-width / 2 + 9, 0, depth / 2 + 1]}>
         <boxGeometry args={[18, height, 3]} />
         <meshStandardMaterial color={accent} roughness={0.9} />

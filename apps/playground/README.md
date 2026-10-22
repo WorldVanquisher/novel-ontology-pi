@@ -23,9 +23,11 @@ the app uses system fonts and does not load remote visual assets.
   becomes small to return to the chronology automatically. Separate entry and
   exit thresholds prevent bouncing between views. Both transitions require a
   zoom gesture; initial framing and background processing cannot trigger them.
-- The overview shows big events on the canon and branch timelines.
-  Child proposals are counted on their parent file; open that event or
-  use **Agent activity** to see the individual proposed and held records.
+- The overview shows big events on the canon and branch timelines alongside
+  live proposal ghosts, tethered to their parent file. Proposed records are
+  translucent amber wireframes; held records are slate. They also appear in
+  their event interior. Approval solidifies accepted records and leaves held
+  records separate. Incoming proposals do not move the main timeline files.
 - Focus the scene and use Left/Right to select a record, Enter to open,
   and Escape to return. Footer arrows provide the same selection controls.
 - Timeline tracks are straight, directed rows. Overview branches align their
@@ -33,15 +35,23 @@ the app uses system fonts and does not load remote visual assets.
   story chains, such as separate locations or battles, on the same sequence
   axis. Positions use the read model's `chrono` key; they do not infer wall-clock
   simultaneity. Characters sit beside the event chain rather than bending it.
-- **Relations** overlays the original ontology links, independently of the
-  chronological rails. **Frame view** fits current positions. Activity never
+- **Relations** is on by default and draws directed ontology links alongside
+  the straight chronological rails. Turn it off for a quieter timeline.
+  Overview parent tethers come from each live record's `parent` field; links
+  to hidden interior endpoints appear when that interior is open.
+  **Frame view** fits current positions. Activity never
   reframes the scene automatically; the activity button is an explicit flight.
 - **Record**, **Activity**, and **Review** toggle a translucent inspector over
   the fullscreen scene. Click the active side tab again or the close button
   to collapse it. The tab list supports Up/Down, Left/Right, and Home/End
   keyboard navigation.
 - **Motion reduced** uses immediate camera changes. The initial preference
-  follows the operating system.
+  follows the operating system and also disables processing animations.
+- The React Flow processing strip stays visible alongside the 3D graph,
+  including on mobile (scroll the strip horizontally). Active stages pulse
+  and connecting edges animate while the sample agent is working. Gate
+  review and merge completion stop the working animation. **Replay session**
+  restarts the sample so you can watch ghosts arrive in place.
 
 The 3D canvas fills the viewport, with transparent controls and collapsible
 details overlaid on desktop and mobile. Major files retain their labels; other labels appear

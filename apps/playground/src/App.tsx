@@ -7,7 +7,7 @@ import { loadWorld, type LoadedWorld } from "./data/loadWorld";
 import { FileEventSource } from "./events/fileSource";
 import { RecordInspector } from "./components/RecordInspector";
 import { KIND_LABEL } from "./archive";
-import { arrangeTimeline } from "./data/timelineLayout";
+import { arrangeTimeline, withOverviewActivity } from "./data/timelineLayout";
 import type {
   ChangeSet,
   PlaygroundEvent,
@@ -24,7 +24,7 @@ export default function App() {
   const [world, setWorld] = useState<LoadedWorld | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<ViewState>({ mode: "lanes" });
-  const [showRelations, setShowRelations] = useState(false);
+  const [showRelations, setShowRelations] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>("be_return");
   const [panel, setPanel] = useState<"record" | "activity" | "review">("record");
   const [inspectorOpen, setInspectorOpen] = useState(false);
@@ -34,6 +34,7 @@ export default function App() {
   const [proposalsByCs, setProposalsByCs] = useState<Record<string, string[]>>({});
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [stage, setStage] = useState(0);
+  const [processingStatus, setProcessingStatus] = useState<"idle" | "working" | "review" | "complete" | "error">("idle");
   const [changesets, setChangesets] = useState<ChangeSet[]>([]);
   const [heldMap, setHeldMap] = useState<Record<string, string[]>>({});
   const [activity, setActivity] = useState({ count: 0, shine: false, caughtUp: false });
@@ -70,6 +71,7 @@ export default function App() {
     (ev: PlaygroundEvent) => {
       switch (ev.type) {
         case "block.started":
+          setProcessingStatus("working");
           setBlockLabel(ev.label);
           setStage(0);
           pushFeed(`▸ ${ev.label} entered the pipeline`);
@@ -79,9 +81,11 @@ export default function App() {
           pushFeed(`▸ sectioned — ${ev.sentences} sentences`);
           break;
         case "verdict":
+          setStage(1);
           pushFeed(ev.text, "jev");
           break;
         case "proposal.added":
+          setStage(2);
           setDynNodes((ns) => [...ns, ev.node]);
           setDynEdges((es) => [...es, ...ev.edges]);
           setProposalsByCs((m) => ({
@@ -93,6 +97,7 @@ export default function App() {
           break;
         case "changeset.pending":
           setStage(4);
+          setProcessingStatus("review");
           setChangesets((cs) => [
             ...cs,
             { id: ev.changesetId, label: ev.label, status: "pending", nodeIds: ev.nodeIds },
@@ -117,6 +122,7 @@ export default function App() {
           break;
         }
         case "changeset.merged":
+          setProcessingStatus("complete");
           pushFeed(`✓ ${ev.changesetId} merged — graph rebuilt`, "ok");
           break;
         case "graph.rebuilt":
@@ -137,10 +143,11 @@ export default function App() {
     setHeldMap({});
     setActivity({ count: 0, shine: false, caughtUp: false });
     setStage(0);
+    setProcessingStatus("idle");
     const src = new FileEventSource(`${DB}/events.jsonl`);
     src.subscribe(handleEvent);
     sourceRef.current = src;
-    void src.start().catch((e: Error) => pushFeed(`⚠ events file: ${e.message}`, "warn"));
+    void src.start().catch((e: Error) => { setProcessingStatus("error"); pushFeed(`⚠ events file: ${e.message}`, "warn"); });
   }, [handleEvent, pushFeed]);
 
   useEffect(() => {
@@ -197,10 +204,7 @@ export default function App() {
   const { nodes, edges } = useMemo(() => {
     if (!world) return { nodes: [] as WorldNode[], edges: [] as WorldEdge[] };
     if (view.mode === "lanes") {
-      return {
-        nodes: world.laneNodes,
-        edges: world.laneEdges,
-      };
+      return withOverviewActivity(world.laneNodes, world.laneEdges, dynNodes, dynEdges);
     }
     const interior = world.interiors[view.bigEventId];
     const mine = dynNodes.filter((n) => n.parent === view.bigEventId);
@@ -322,7 +326,7 @@ export default function App() {
         </aside>
         <div className="activity-dock"><ActivityTab count={activity.count} shine={activity.shine} caughtUp={activity.caughtUp} onClick={flyToSite} /></div>
       </main>
-      <PipelineStrip stage={stage} />
+      <PipelineStrip stage={stage} status={processingStatus} reducedMotion={reducedMotion} />
       <footer className="transport">
         <div className="selection-counter"><span className="eyebrow">RECORD / SELECT</span><div>{String(selected ? selectedIndex + 1 : 0).padStart(2, "0")}<small>/ {String(nodes.length).padStart(2, "0")}</small></div></div>
         <div className="record-transport"><button className="arrow-button" aria-label="Previous record" disabled={!nodes.length} onClick={() => stepRecord(-1)}>←</button><div><strong>{selected?.label ?? "Archive"}</strong><span>{selected ? `${KIND_LABEL[selected.kind]} / ${selected.lane}` : "No records"}</span></div><button className="arrow-button" aria-label="Next record" disabled={!nodes.length} onClick={() => stepRecord(1)}>→</button></div>

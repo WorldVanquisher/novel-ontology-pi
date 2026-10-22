@@ -13,7 +13,7 @@ const archiveTheme = {
   ...darkTheme,
   canvas: { background: "#171d1b", fog: null },
   node: { ...darkTheme.node, opacity: 1, selectedOpacity: 1, inactiveOpacity: 1 },
-  edge: { ...darkTheme.edge, fill: "#8a947c", activeFill: "#acbc8e", opacity: 0.55, selectedOpacity: 0.8, inactiveOpacity: 0.2 },
+  edge: { ...darkTheme.edge, fill: "#9aaa84", activeFill: "#acbc8e", opacity: 0.85, selectedOpacity: 1, inactiveOpacity: 0.7 },
   arrow: { fill: "#8a947c", activeFill: "#acbc8e" },
 };
 
@@ -77,9 +77,11 @@ function toGraphNode(node: WorldNode, interior: boolean, pinned: boolean): Graph
 function toGraphEdge(edge: WorldEdge): GraphEdge {
   return {
     id: edge.id, source: edge.from, target: edge.to,
-    fill: edge.state === "proposed" ? "#c6a16b" : edge.state === "held" ? "#819398" : edge.kind === "cross" ? "#b49a8b" : "#8a947c",
-    size: edge.kind === "flow" ? 2 : 1,
+    fill: edge.state === "proposed" ? "#d6b57e" : edge.state === "held" ? "#819398" : edge.kind === "cross" ? "#c0a79a" : edge.kind === "speaks" ? "#a79ab4" : "#9aaa84",
+    size: edge.kind === "flow" ? 2.5 : 2,
     dashed: edge.state !== "canon" || edge.kind === "cross",
+    dashArray: [12, 8],
+    arrowPlacement: "mid",
   };
 }
 
@@ -103,12 +105,12 @@ function LabelProjector({ bus, selectedId, hoveredId, nodes, tracks, interior }:
       object.getWorldPosition(point.current);
       bus.positions.set(node.id, [point.current.x, point.current.y, point.current.z]);
       const focused = node.id === selectedId || node.id === hoveredId;
-      if (!focused && node.kind !== "bigEvent" && node.kind !== "location" && node.kind !== "event" && node.kind !== "character") return;
-      if (node.kind === "character") { point.current.x += 125; point.current.y -= 10; }
+      if (!focused && node.state === "canon" && node.kind !== "bigEvent" && node.kind !== "location" && node.kind !== "event" && node.kind !== "character") return;
+      if (node.kind === "character" && interior) { point.current.x += 125; point.current.y -= 10; }
       else if (node.kind !== "bigEvent") point.current.y -= 110;
       point.current.project(camera);
       if (point.current.z > 1 || Math.abs(point.current.x) > 1 || Math.abs(point.current.y) > 1) return;
-      candidates.push({ element, horizontal: (point.current.x * 0.5 + 0.5) * size.width, vertical: (-point.current.y * 0.5 + 0.5) * size.height, priority: node.id === selectedId ? 0 : node.id === hoveredId ? 1 : node.kind === "bigEvent" ? 2 : 3 });
+      candidates.push({ element, horizontal: (point.current.x * 0.5 + 0.5) * size.width, vertical: (-point.current.y * 0.5 + 0.5) * size.height, priority: node.id === selectedId ? 0 : node.id === hoveredId ? 1 : node.kind === "bigEvent" || node.state !== "canon" ? 2 : 3 });
     });
     const occupied: { left: number; top: number; right: number; bottom: number }[] = [];
     candidates.sort((first, second) => first.priority - second.priority);
@@ -287,7 +289,7 @@ export const WorldGraph = forwardRef<GraphCanvasRef, Props>(function WorldGraph(
       selections={selections}
       glOptions={{ preserveDrawingBuffer: true, antialias: true }}
       layoutType="forceDirected3d" cameraMode="rotate" draggable={false} labelType="none"
-      edgeArrowPosition="end" animated={false}
+      edgeArrowPosition="end" edgeInterpolation="linear" animated={false}
       onNodeClick={(node) => onNodeClick(node.data.world as WorldNode)}
       onNodePointerOver={(node) => setHoveredId(node.id)}
       onNodePointerOut={() => setHoveredId(null)}
