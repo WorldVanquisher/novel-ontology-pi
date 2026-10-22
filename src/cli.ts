@@ -21,6 +21,7 @@ import {
   DEFAULT_SEARCH_LIMIT,
 } from "./commands/queryCommands.js";
 import { llmPing, llmProbe } from "./commands/llmCommands.js";
+import { ingestNovel } from "./commands/ingestCommands.js";
 import {
   jevLogin,
   jevLogout,
@@ -46,7 +47,8 @@ const COMMANDS: Record<string, string> = {
   "novel watch <novel-dir> [--port N]": "Read-only loopback SSE over the processing event log",
   "novel section <file>": "Deterministic sentence sectioning only (free, testable)",
   "novel blocks <file> [--size N]": "Chapter detection + block cutting map (no models)",
-  "novel ingest <file>": "Section -> miniloop -> extract -> ChangeSet (merge gate)",
+  "novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N]":
+    "Full loop: blocks -> miniloop (live Jev) -> ChangeSets -> merge gate -> graph. Default stops at the first gate; --auto-approve applies every ChangeSet",
   "novel miniloop run|inspect": "Run the Jev miniloop; inspect per-window decisions",
   "novel changeset list|show|approve|hold <novel-dir> [id]":
     "The merge gate: review accumulated proposals before they touch the main graph",
@@ -275,6 +277,35 @@ async function main(): Promise<void> {
       );
       return;
     }
+  }
+
+  if (cmd === "ingest") {
+    const novelDir = positional[1];
+    const file = positional[2];
+    if (!novelDir || !file || file.startsWith("--")) {
+      throw new Error(
+        "Usage: novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N]",
+      );
+    }
+    const maxBlocksRaw = flag(positional, "--max-blocks");
+    const maxBlocks = maxBlocksRaw === undefined ? undefined : Number(maxBlocksRaw);
+    if (maxBlocks !== undefined && (!Number.isInteger(maxBlocks) || maxBlocks < 1)) {
+      throw new Error(`novel ingest --max-blocks must be a positive integer (got: ${maxBlocksRaw})`);
+    }
+    const blockSizeRaw = flag(positional, "--block-size");
+    const blockSize = blockSizeRaw === undefined ? undefined : Number(blockSizeRaw);
+    if (blockSize !== undefined && (!Number.isInteger(blockSize) || blockSize < 100)) {
+      throw new Error(`novel ingest --block-size must be an integer >= 100 (got: ${blockSizeRaw})`);
+    }
+    out(
+      await ingestNovel(novelDir, file, {
+        autoApprove: positional.includes("--auto-approve"),
+        maxBlocks,
+        blockSize,
+      }),
+      pretty,
+    );
+    return;
   }
 
   if (cmd === "bundle" && sub === "export" && positional[2] && positional[3]) {

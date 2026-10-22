@@ -4,7 +4,7 @@ import type { Entity } from "../ontology/types.js";
 import { newChangeSet, type ChangeSet } from "../merge/changeset.js";
 import type { PatchContext } from "./patches/types.js";
 import { PATCH_REGISTRY } from "./patches/index.js";
-import { scanKnownNames } from "./patches/name-detector.js";
+import { scanKnownNames, type NameScanHit } from "./patches/name-detector.js";
 
 export interface MiniloopResult {
   changeset: ChangeSet;
@@ -54,6 +54,16 @@ export class Miniloop {
     };
     // Deterministic half of the name patch: free, certain, no model call.
     ctx.accepted["nameHits"] = scanKnownNames(ctx);
+    // Presence candidates, per the presence patch's documented design:
+    // the characters the name scan found mentioned in this block. (The
+    // previous scene's carry-over joins here once scene state threads
+    // through the loop; new-name candidates stay with the extraction
+    // step, which owns the zero-context candidate extraction.)
+    ctx.accepted["presenceCandidates"] = [
+      ...new Set(
+        (ctx.accepted["nameHits"] as NameScanHit[]).map((h) => h.entityId),
+      ),
+    ];
 
     for (let w = 0; w < input.sentences.length; w += windowSize) {
       ctx.windowSentenceIds = input.sentences

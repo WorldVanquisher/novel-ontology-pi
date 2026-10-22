@@ -36,7 +36,12 @@ patches: scene boundaries, dialogue, names, presence, speakers), extracts
 events per scene, and accumulates a **ChangeSet: proposed changes to the
 ontology main graph. Nothing is merged yet.**
 
-1. Run `novel ingest <file>` and read the ChangeSet summary.
+1. Run `novel ingest <novel-dir> <file>` and read the ChangeSet summary.
+   By default the run stops at the first block's merge gate with the
+   ChangeSet saved as held — approve it (`novel changeset approve
+   <novel-dir> <id>`), then re-run ingest to roll to the next block.
+   `--auto-approve` applies every ChangeSet in-process (trusted batches
+   and smoke runs only — the review below is the default for a reason).
 2. **Review it like an editor, not a rubber stamp.** You hold the context
    the miniloop cannot: earlier chapters, the user's intent, naming
    consistency, character identity across aliases and languages.

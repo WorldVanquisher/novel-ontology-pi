@@ -2,6 +2,7 @@ import { sectionBlock } from "../text/sectioning.js";
 import { Miniloop } from "../autostep/miniloop.js";
 import type { DecisionModel } from "../connectors/jev.js";
 import type { OntologyStore } from "../ontology/store.js";
+import type { Entity } from "../ontology/types.js";
 import type { ChangeSet } from "../merge/changeset.js";
 import { applyChangeSet } from "../merge/apply.js";
 import { saveChangeSet } from "../merge/changesetStore.js";
@@ -35,7 +36,18 @@ export class BlockProcessor {
     private store: OntologyStore,
     private decisions: DecisionModel,
     private review: (cs: ChangeSet) => Promise<ReviewDecision>,
-    private observation: { novelDir?: string; emit?: EventSink } = {},
+    private observation: {
+      novelDir?: string;
+      emit?: EventSink;
+      /**
+       * Loads the entities the miniloop should treat as already known
+       * (the cumulative per-novel name registry). Called before EVERY
+       * block, so entities merged by earlier blocks — or earlier runs —
+       * are visible to the name scan and the presence patch. When not
+       * provided, blocks start with an empty registry.
+       */
+      loadKnownEntities?: () => Promise<Entity[]>;
+    } = {},
   ) {}
 
   async processNovel(blocks: { blockId: string; text: string }[]): Promise<{
@@ -53,13 +65,19 @@ export class BlockProcessor {
       await emit?.({ type: "sectioned", blockId: block.blockId, sentences: sentences.length });
       let revisionRounds = 0;
       for (;;) {
+        const knownEntities = this.observation.loadKnownEntities
+          ? await this.observation.loadKnownEntities()
+          : [];
         const result = await miniloop.runBlock({
           blockId: block.blockId,
           sentences,
-          knownEntities: [], // TODO: load from store before each block
+          knownEntities,
           stateSummary: `Processing block ${block.blockId}.`,
         });
         if (this.observation.novelDir) await saveChangeSet(this.observation.novelDir, result.changeset);
+        // No event emissions here: saveChangeSet is the emitter of record
+        // for proposal.added / changeset.<status> — it fires them only
+        // after the persisted state is visible, deduped by status change.
         const decision = await this.review(result.changeset);
         result.changeset.status = decision;
         if (this.observation.novelDir) await saveChangeSet(this.observation.novelDir, result.changeset);
