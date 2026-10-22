@@ -105,8 +105,8 @@ The key is reported as status only (`configured`) and never printed.
 A missing key, model, or base URL is a specific error, not a silent
 skip. Transient failures (5xx, network) are retried with backoff;
 4xx is not retried; each attempt times out after 30s. These commands
-are plumbing only — the client is **not** wired into `ingest` yet;
-that step lands separately, with live keys.
+are plumbing only — the client is wired into `ingest` when the
+per-scene extraction step lands (the miniloop already runs live).
 
 ## Jev key management: `jev login` / `status` / `logout` / `ping`
 
@@ -164,7 +164,10 @@ Read-only processing event streaming: `novel watch <novel-dir> [--port 4317]`
 serves loopback SSE from the workspace's processing `events.jsonl` (separate
 from `ontology/events.jsonl`). See the [contract draft and SSH setup](docs/playground-events-watch.md)
 for replay, integration limits, and frontend questions. `watch` never reviews
-or applies ChangeSets; the CLI ingest path is still not wired.
+or applies ChangeSets. The CLI ingest path **is** wired: `novel ingest
+<novel-dir> <file>` runs blocks -> miniloop -> ChangeSets -> merge gate
+(stops at the first gate by default; `--auto-approve` applies in-process),
+and the playground follows a run live via `?live=http://127.0.0.1:4317/events`.
 
 v0.1 skeleton (2026-10-21): founding design, Skill, CLI skeleton with
 working sectioning, decision-patch interfaces + v1 patches, ChangeSet /

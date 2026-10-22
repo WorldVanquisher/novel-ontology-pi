@@ -5,11 +5,13 @@ import { PipelineStrip } from "./components/PipelineStrip";
 import { WorldGraph, framePositions, scaledPos, type LabelBus } from "./components/WorldGraph";
 import { loadWorld, type LoadedWorld } from "./data/loadWorld";
 import { FileEventSource } from "./events/fileSource";
+import { SseEventSource } from "./events/sseSource";
 import { RecordInspector } from "./components/RecordInspector";
 import { KIND_LABEL } from "./archive";
 import { arrangeTimeline, withOverviewActivity } from "./data/timelineLayout";
 import type {
   ChangeSet,
+  EventSource as PlaygroundEventSource,
   PlaygroundEvent,
   ViewState,
   WorldEdge,
@@ -39,7 +41,12 @@ export default function App() {
   const [heldMap, setHeldMap] = useState<Record<string, string[]>>({});
   const [activity, setActivity] = useState({ count: 0, shine: false, caughtUp: false });
   const [blockLabel, setBlockLabel] = useState<string | null>(null);
-  const sourceRef = useRef<FileEventSource | null>(null);
+  const sourceRef = useRef<PlaygroundEventSource | null>(null);
+  /** Live mode: ?live=<watch SSE url> swaps the file replay for `novel watch`. */
+  const liveUrl = useMemo(
+    () => new URLSearchParams(window.location.search).get("live"),
+    [],
+  );
   const graphRef = useRef<GraphCanvasRef>(null);
   const inspectorRef = useRef<HTMLDivElement>(null);
   const labelBus = useMemo<LabelBus>(
@@ -117,7 +124,10 @@ export default function App() {
                 : e,
             ),
           );
-          pushFeed("⧗ main agent HELD 1 proposal — 事件·提前归还 (uncertain)", "warn");
+          pushFeed(
+            `⧗ main agent HELD ${ev.nodeIds.length} proposal${ev.nodeIds.length === 1 ? "" : "s"} — ${ev.changesetId}`,
+            "warn",
+          );
           noteActivity(true); // escalations shine immediately
           break;
         }
@@ -144,11 +154,24 @@ export default function App() {
     setActivity({ count: 0, shine: false, caughtUp: false });
     setStage(0);
     setProcessingStatus("idle");
-    const src = new FileEventSource(`${DB}/events.jsonl`);
+    const src: PlaygroundEventSource = liveUrl
+      ? new SseEventSource(liveUrl)
+      : new FileEventSource(`${DB}/events.jsonl`);
     src.subscribe(handleEvent);
     sourceRef.current = src;
-    void src.start().catch((e: Error) => { setProcessingStatus("error"); pushFeed(`⚠ events file: ${e.message}`, "warn"); });
-  }, [handleEvent, pushFeed]);
+    try {
+      const started = src.start();
+      if (started) {
+        void started.catch((e: Error) => {
+          setProcessingStatus("error");
+          pushFeed(`⚠ events file: ${e.message}`, "warn");
+        });
+      }
+    } catch (e) {
+      setProcessingStatus("error");
+      pushFeed(`⚠ event source: ${(e as Error).message}`, "warn");
+    }
+  }, [handleEvent, pushFeed, liveUrl]);
 
   useEffect(() => {
     if (world) startSession();
@@ -272,7 +295,7 @@ export default function App() {
           <button className={inspectorOpen && panel === "activity" ? "active" : ""} onClick={() => { setPanel("activity"); setInspectorOpen(true); }}>Activity <span>/</span></button>
           <button className={inspectorOpen && panel === "review" ? "active" : ""} onClick={() => { setPanel("review"); setInspectorOpen(true); }}>Review <span>{String(pendingCount).padStart(2, "0")}</span></button>
         </nav>
-        <span className="sample-badge"><i />LOCAL SAMPLE</span>
+        <span className="sample-badge"><i />{liveUrl ? "LIVE" : "LOCAL SAMPLE"}</span>
       </header>
       <div className="page-heading">
         <div><div className="eyebrow">COLLECTION 001 / INDEX SAMPLE</div><h1>{view.mode === "lanes" ? "Narrative archive." : world.bigEventLabels[view.bigEventId]}</h1></div>
@@ -319,7 +342,7 @@ export default function App() {
           <div className="sheet-heading"><span className="eyebrow">ARCHIVE / {panel}</span><button aria-label="Close details" onClick={() => { setInspectorOpen(false); document.getElementById(`tab-${panel}`)?.focus(); }}>×</button></div>
           <div ref={inspectorRef} className="inspector-body" id={`panel-${panel}`} role="tabpanel" aria-labelledby={`tab-${panel}`}>
             {panel === "record" && <RecordInspector selected={selected} nodes={nodes} edges={edges} childCount={selected ? (world.interiors[selected.id]?.nodes.length ?? 0) + dynNodes.filter((node) => node.parent === selected.id).length : 0} canOpen={!!selected && !!world.interiors[selected.id]} onSelect={activateNode} />}
-            {panel === "activity" && <><div className="panel-intro"><span className="eyebrow">PROCESSING JOURNAL</span><h2>In the making.</h2><p>{blockLabel ?? "Waiting for the sample session."}</p><button onClick={startSession}>Replay sample ↻</button></div><DecisionFeed entries={feed} /></>}
+            {panel === "activity" && <><div className="panel-intro"><span className="eyebrow">PROCESSING JOURNAL</span><h2>In the making.</h2><p>{blockLabel ?? (liveUrl ? "Connected to the live watch stream." : "Waiting for the sample session.")}</p><button onClick={startSession}>{liveUrl ? "Reconnect live" : "Replay sample ↻"}</button></div><DecisionFeed entries={feed} /></>}
             {panel === "review" && <><div className="panel-intro"><span className="eyebrow">THE MERGE GATE</span><h2>Before it is canon.</h2><p>Review the sample proposals. Held records stay separate when the rest merge.</p></div><GateQueue changesets={changesets} heldMap={heldMap} labels={labels} onApprove={approve} /></>}
           </div>
           </div>
@@ -330,7 +353,7 @@ export default function App() {
       <footer className="transport">
         <div className="selection-counter"><span className="eyebrow">RECORD / SELECT</span><div>{String(selected ? selectedIndex + 1 : 0).padStart(2, "0")}<small>/ {String(nodes.length).padStart(2, "0")}</small></div></div>
         <div className="record-transport"><button className="arrow-button" aria-label="Previous record" disabled={!nodes.length} onClick={() => stepRecord(-1)}>←</button><div><strong>{selected?.label ?? "Archive"}</strong><span>{selected ? `${KIND_LABEL[selected.kind]} / ${selected.lane}` : "No records"}</span></div><button className="arrow-button" aria-label="Next record" disabled={!nodes.length} onClick={() => stepRecord(1)}>→</button></div>
-        <div className="session-controls"><span className="eyebrow">LOCAL FILE REPLAY / DEMO</span><button onClick={startSession}>Replay session ↻</button></div>
+        <div className="session-controls"><span className="eyebrow">{liveUrl ? "LIVE / NOVEL WATCH" : "LOCAL FILE REPLAY / DEMO"}</span><button onClick={startSession}>{liveUrl ? "Reconnect live" : "Replay session ↻"}</button></div>
       </footer>
     </div>
   );

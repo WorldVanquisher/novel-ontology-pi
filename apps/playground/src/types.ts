@@ -74,6 +74,7 @@ export type PlaygroundEvent =
 
 export interface EventSource {
   subscribe(handler: (event: PlaygroundEvent) => void): () => void;
-  start(): void;
+  /** File sources load asynchronously; SSE sources connect synchronously. */
+  start(): void | Promise<void>;
   stop(): void;
 }
