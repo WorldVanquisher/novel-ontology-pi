@@ -9,7 +9,9 @@ import { workModelFromEnv, type HttpWorkModel } from "../connectors/workModel.js
 import { loadCorrections } from "../maintenance/corrections.js";
 import { resolveJevKey } from "../connectors/secrets.js";
 import { EventLog } from "../events/log.js";
+import { listChangeSets } from "../merge/changesetStore.js";
 import type { Entity } from "../ontology/types.js";
+import { loadExtractionCounts } from "../processing/counts.js";
 
 export interface IngestOptions {
   /** Approve every ChangeSet at the merge gate (smoke runs, trusted batches). */
@@ -67,10 +69,33 @@ export async function ingestNovel(
   // protocol (sector 09) re-runs a single block from it, in a later
   // session, without the original file at hand.
   const sourceDir = join(novelDir, "source");
+  const allBlocks = cutBlocks(text, opts.blockSize);
+  const selectedBlocks = opts.maxBlocks ? allBlocks.slice(0, opts.maxBlocks) : allBlocks;
+  const existing = await listChangeSets(novelDir);
+  const unresolved = existing.find((changeset) => changeset.status !== "approved" && selectedBlocks.some((block) => block.id === changeset.blockId));
+  if (unresolved) throw new Error(`Existing ${unresolved.status} packet ${unresolved.id}; review, revise or recall it before ingesting again.`);
+  const approved = new Set(existing
+    .filter((changeset) => changeset.status === "approved")
+    .map((changeset) => changeset.blockId));
+  let processingLog = "";
+  try {
+    processingLog = await readFile(join(novelDir, "events.jsonl"), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const applied = new Set(processingLog.split("\n").filter(Boolean)
+    .map((line) => JSON.parse(line) as { event: { type: string; changesetId?: string } })
+    .filter((record) => record.event.type === "changeset.applied")
+    .map((record) => record.event.changesetId));
+  for (const block of selectedBlocks) {
+    if (approved.has(block.id) && !applied.has(`cs_${block.id}`)) {
+      throw new Error(`Block ${block.id} is approved without an applied record; inspect the gate before resuming.`);
+    }
+  }
+  const skippedBlocks = selectedBlocks.filter((block) => approved.has(block.id)).map((block) => block.id);
+  const blocks = selectedBlocks.filter((block) => !approved.has(block.id));
   await mkdir(sourceDir, { recursive: true });
   await copyFile(file, join(sourceDir, basename(file)));
-  const allBlocks = cutBlocks(text, opts.blockSize);
-  const blocks = opts.maxBlocks ? allBlocks.slice(0, opts.maxBlocks) : allBlocks;
 
   const bundle = new BundleStore(ontologyDir);
   const log = new EventLog(novelDir);
@@ -80,14 +105,7 @@ export async function ingestNovel(
     for (const e of rows) byId.set(e.id, e);
     return [...byId.values()];
   };
-  const loadCounts = async (): Promise<{ events: number; scenes: number }> => {
-    const events = await bundle.loadFile<{ id: string }>("events.jsonl");
-    const scenes = await bundle.loadFile<{ id: string }>("scenes.jsonl");
-    return {
-      events: new Set(events.map((e) => e.id)).size,
-      scenes: new Set(scenes.map((s) => s.id)).size,
-    };
-  };
+  const loadCounts = () => loadExtractionCounts(novelDir, bundle);
 
   // Extraction (sector 08) runs when a work LLM is configured and not
   // explicitly disabled. Its absence is reported, never silent.
@@ -113,7 +131,7 @@ export async function ingestNovel(
   });
 
   const result = await processor.processNovel(
-    blocks.map((b) => ({ blockId: b.id, text: b.text, chapterIndex: b.chapterIndex })),
+    blocks.map((b) => ({ blockId: b.id, text: b.text, chapterIndex: b.chapterIndex, sectionIndex: b.index })),
   );
 
   let graph: Awaited<ReturnType<typeof buildGraphFromBundle>> | null = null;
@@ -134,6 +152,7 @@ export async function ingestNovel(
     workModel: workModel?.modelId ?? null,
     blocksTotal: blocks.length,
     blocksInFile: allBlocks.length,
+    skippedBlocks,
     mergedBlocks: result.mergedBlocks,
     stoppedAt: result.stoppedAt,
     stopReason: result.stopReason,

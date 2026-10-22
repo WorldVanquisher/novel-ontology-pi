@@ -104,7 +104,7 @@ export const nameDetector: DecisionPatch = {
 
   buildQuestions(ctx: PatchContext): DecisionQuestion[] {
     const candidates = (ctx.accepted["nameCandidates"] as string[] | undefined) ?? [];
-    const known = ctx.knownEntities.map((e) => e.id);
+    const known = ctx.knownEntities.filter((entity) => entity.kind === "Character").map((entity) => entity.id);
     const qs: DecisionQuestion[] = [];
     for (const c of candidates) {
       qs.push({

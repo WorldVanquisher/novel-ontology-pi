@@ -6,7 +6,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initWorkspace } from "../src/workspace/init.js";
 import { ingestNovel } from "../src/commands/ingestCommands.js";
-import { listChangeSets } from "../src/merge/changesetStore.js";
+import { listChangeSets, setChangeSetStatus } from "../src/merge/changesetStore.js";
+import { applyChangeSet } from "../src/merge/apply.js";
+import { BundleStore } from "../src/connectors/bundle.js";
+import { EventLog } from "../src/events/log.js";
 
 /**
  * End-to-end ingest over a LOOPBACK Jev wire mock: the real JevClient
@@ -194,6 +197,61 @@ test("ingest in gate mode stops at the first merge gate with the ChangeSet held"
     assert.equal(types.filter((x) => x === "changeset.pending").length, 1);
     assert.equal(types.filter((x) => x === "changeset.held").length, 1);
     assert.ok(!types.includes("changeset.merged"), "nothing merged behind the gate");
+    const packetPath = join(dir, "changesets", "cs_b0001.json");
+    const before = await readFile(packetPath, "utf8");
+    const sourceBefore = await readFile(join(dir, "source", "chapter.txt"), "utf8");
+    const callsBefore = jev.seenKeys.length;
+    await writeFile(file, NOVEL_TEXT + "\n补充内容。");
+    await assert.rejects(ingestNovel(dir, file, { env }), /Existing held packet/);
+    assert.equal(await readFile(packetPath, "utf8"), before);
+    assert.equal(await readFile(join(dir, "source", "chapter.txt"), "utf8"), sourceBefore);
+    assert.equal(jev.seenKeys.length, callsBefore);
+  } finally {
+    await jev.close();
+  }
+});
+
+test("gate-mode resume skips an applied chapter and preserves the next chapter's provenance", async () => {
+  const jev = await startMockJev();
+  const work = await startMockWorkLlm();
+  try {
+    const { dir, file } = await makeNovel();
+    const env = {
+      ...process.env, TYPESAFE_API_KEY: FAKE_KEY, JEV_ENDPOINT: jev.url, NOVEL_SECRETS_DIR: join(dir, "secrets"),
+      WORK_LLM_API_KEY: FAKE_KEY, WORK_LLM_BASE_URL: work.url, WORK_LLM_MODEL: "test-model",
+    };
+    await ingestNovel(dir, file, { env });
+    const approved = await setChangeSetStatus(dir, "cs_b0001", "approved");
+    await applyChangeSet(new BundleStore(join(dir, "ontology")), approved, new EventLog(dir).emit);
+    const previous = await readFile(join(dir, "changesets", "cs_b0001.json"), "utf8");
+    const resumed = await ingestNovel(dir, file, { env });
+    assert.deepEqual(resumed.skippedBlocks, ["b0001"]);
+    assert.equal(resumed.stoppedAt, "b0002");
+    assert.equal(await readFile(join(dir, "changesets", "cs_b0001.json"), "utf8"), previous);
+    const changesets = await listChangeSets(dir);
+    const next = changesets.find((changeset) => changeset.blockId === "b0002")!;
+    assert.equal(next.status, "held");
+    const sentenceIds = next.proposals.flatMap((proposal) => proposal.provenance.sentenceIds);
+    assert.ok(sentenceIds.length > 0);
+    assert.ok(sentenceIds.every((id) => id.startsWith("b0001_")));
+    const started = (await readFile(join(dir, "events.jsonl"), "utf8")).split("\n").filter(Boolean)
+      .map((line) => JSON.parse(line) as { event: { type: string; blockId?: string } })
+      .filter((record) => record.event.type === "block.started").map((record) => record.event.blockId);
+    assert.deepEqual(started, ["b0001", "b0002"]);
+  } finally {
+    await jev.close();
+    await work.close();
+  }
+});
+
+test("resume refuses an approval without an applied record", async () => {
+  const jev = await startMockJev();
+  try {
+    const { dir, file } = await makeNovel();
+    const env = { ...process.env, TYPESAFE_API_KEY: FAKE_KEY, JEV_ENDPOINT: jev.url, NOVEL_SECRETS_DIR: join(dir, "secrets") };
+    await ingestNovel(dir, file, { env });
+    await setChangeSetStatus(dir, "cs_b0001", "approved");
+    await assert.rejects(() => ingestNovel(dir, file, { env }), /approved without an applied record/);
   } finally {
     await jev.close();
   }

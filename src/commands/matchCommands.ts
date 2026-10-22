@@ -58,7 +58,7 @@ export async function runMatch(
     if (!cs) throw new Error(`No changeset ${opts.changesetId} in ${novelDir}.`);
     // At review time the changeset's entities may not be merged yet:
     // they join the matching universe as proposed records.
-    for (const p of cs.proposals) {
+    for (const p of cs.status === "approved" ? [] : cs.proposals) {
       if (p.kind !== "upsert_entity") continue;
       const payload = p.payload as Partial<Entity>;
       if (payload.id && payload.names && !byId.has(payload.id)) {

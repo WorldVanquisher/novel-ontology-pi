@@ -30,6 +30,10 @@ import {
 } from "../src/maintenance/corrections.js";
 import { ingestNovel } from "../src/commands/ingestCommands.js";
 import { runRecall } from "../src/commands/recallCommands.js";
+import { runMatch } from "../src/commands/matchCommands.js";
+import { newChangeSet } from "../src/merge/changeset.js";
+import { saveChangeSet } from "../src/merge/changesetStore.js";
+import { EventLog } from "../src/events/log.js";
 import type { Entity, OntEvent, Relation, Scene } from "../src/ontology/types.js";
 
 const ent = (id: string, kind: Entity["kind"], ...forms: string[]): Entity => ({
@@ -127,7 +131,7 @@ test("fix merge folds names, rewires relations/events/scenes, and leaves an audi
   await store.addRelation(selfAfter);
   const scene: Scene = {
     id: "scene_000001", chapterIndex: 0, sentenceIds: [], charactersPresent: ["char_000002"],
-    charactersMentioned: [], turns: [{ speakerId: "char_000002", addresseeId: "char_000003", sentenceIds: [] }],
+    charactersMentioned: ["char_000001", "char_000003"], turns: [{ speakerId: "char_000002", addresseeId: "char_000003", sentenceIds: [] }],
     locationId: null,
   };
   await store.upsertScene(scene);
@@ -155,6 +159,8 @@ test("fix merge folds names, rewires relations/events/scenes, and leaves an audi
   assert.deepEqual(events[0].affectedCharacters, ["char_000001", "char_000003"]);
   const scenes = await store.loadFile<Scene>("scenes.jsonl");
   assert.equal(scenes[0].turns[0].speakerId, "char_000001");
+  assert.deepEqual(scenes[0].charactersPresent, ["char_000001"]);
+  assert.deepEqual(scenes[0].charactersMentioned, ["char_000003"]);
 
   const audit = await readFile(join(dir, "maintenance.jsonl"), "utf8");
   assert.match(audit, /"op":"merge"/);
@@ -309,4 +315,39 @@ test("recall: a held block re-runs with the pin honored and the old changeset ke
   } finally {
     await jev.close();
   }
+});
+
+test("extraction corrections are validated and audited before a recall", async () => {
+  const dir = await makeWorkspace();
+  const value = { distinctNames: [["甲", "乙"]], rejectCharacterNames: ["unknown"], instructions: "保留原文姓名与中文摘要。" };
+  await assert.rejects(runFix(dir, "correct", [], { block: "b0001", key: "extraction:constraints", value: JSON.stringify({ distinctNames: ["甲"] }) }));
+  assert.deepEqual(await loadCorrections(dir), []);
+  await runFix(dir, "correct", [], { block: "b0001", key: "extraction:constraints", value: JSON.stringify(value), reason: "原文表明是两个人物" });
+  assert.deepEqual((await loadCorrections(dir))[0].value, value);
+  const audit = JSON.parse((await readFile(join(dir, "maintenance.jsonl"), "utf8")).trim());
+  assert.equal(audit.op, "correct");
+  assert.equal(audit.args.key, "extraction:constraints");
+  assert.deepEqual(audit.args.value, value);
+});
+
+test("matching an approved ChangeSet does not resurrect removed proposed entities", async () => {
+  const dir = await makeWorkspace();
+  const bundle = new BundleStore(join(dir, "ontology"));
+  await bundle.upsertEntity(ent("char_000001", "Character", "白井黒子"));
+  const changeset = newChangeSet("b0001");
+  changeset.status = "approved";
+  changeset.proposals = [{ id: "old_duplicate", kind: "upsert_entity", payload: ent("char_000002", "Character", "白井黑子"), confidence: 1, provenance: { blockId: "b0001", sentenceIds: [], patchId: "test" } }];
+  await saveChangeSet(dir, changeset);
+  const packet = await runMatch(dir, { changesetId: changeset.id, env: { TYPESAFE_API_KEY: "fake-test-key", JEV_ENDPOINT: "http://127.0.0.1:1/should-not-be-called" } });
+  assert.equal(packet.candidates, 0);
+});
+
+test("changing an applied gate to held cannot bypass recall's rollback requirement", async () => {
+  const dir = await makeWorkspace();
+  await writeFile(join(dir, "source", "novel.txt"), "序章\n门打开了。\n");
+  const changeset = newChangeSet("b0001");
+  changeset.status = "held";
+  await saveChangeSet(dir, changeset);
+  await new EventLog(dir).emit({ type: "changeset.applied", changesetId: changeset.id, processed: 0, unsupportedProposalIds: [], target: "store" });
+  await assert.rejects(runRecall(dir, "b0001", { env: { TYPESAFE_API_KEY: "fake-test-key", JEV_ENDPOINT: "http://127.0.0.1:1/should-not-be-called" } }), /already applied/);
 });

@@ -29,6 +29,15 @@ export interface MiniloopResult {
   appliedPins?: string[];
 }
 
+export interface MiniloopProgress {
+  blockId: string;
+  patchId: string;
+  proposals: ChangeSet["proposals"];
+  sceneSpans: string[][];
+  dialogueUnits: string[][];
+  turns: DialogueTurn[];
+}
+
 /**
  * The System 1 autostep miniloop.
  *
@@ -76,6 +85,7 @@ export class Miniloop {
      * applied answer is the pin, at full confidence.
      */
     pinnedAnswers?: Map<string, unknown>;
+    onProgress?: (progress: MiniloopProgress) => Promise<void>;
   }): Promise<MiniloopResult> {
     const changeset = newChangeSet(input.blockId);
     const escalations: MiniloopResult["escalations"] = [];
@@ -112,11 +122,20 @@ export class Miniloop {
     const windows: WindowRecord[] = [];
     const seenProposalIds = new Set<string>();
     const appliedPins: string[] = [];
+    const identityRegistry = input.knownEntities.filter((entity) => entity.kind === "Character").map((entity) => `${entity.id}: ${entity.names.map((form) => form.text).join(" / ")}`).join("\n");
     let firstWindow = true;
     for (let w = 0; w < input.sentences.length; w += windowSize) {
       ctx.windowSentenceIds = input.sentences
         .slice(w, w + windowSize)
         .map((s) => s.id);
+      const priorPresent = (ctx.accepted["charactersPresent"] as string[] | undefined) ?? [];
+      ctx.accepted["presenceCandidates"] = [...new Set([
+        ...(ctx.accepted["nameHits"] as NameScanHit[]).filter((hit) => ctx.windowSentenceIds.includes(hit.sentenceId)).map((hit) => hit.entityId),
+        ...priorPresent,
+      ])].filter((id) => input.knownEntities.some((entity) => entity.id === id && entity.kind === "Character"));
+      ctx.accepted["charactersPresent"] = [];
+      ctx.accepted["charactersMentioned"] = [];
+      ctx.accepted["turns"] = [];
       ctx.accepted["dialogueUnits"] = undefined;
       ctx.accepted["sceneSpans"] = ctx.accepted["sceneSpans"] ?? [];
 
@@ -131,7 +150,7 @@ export class Miniloop {
           )
           .join("\n");
         const decided = await this.decisions.decide(
-          `${ctx.stateSummary}\n---\n${windowText}`,
+          `${ctx.stateSummary}\nIDENTITY REGISTRY (not evidence of presence):\n${identityRegistry}\n---\n${windowText}`,
           questions,
         );
         // Recall pins (sector 09): a pinned key keeps the question on
@@ -155,6 +174,14 @@ export class Miniloop {
         escalations.push(
           ...outcome.escalations.map((e) => ({ patchId: patch.id, ...e })),
         );
+        await input.onProgress?.({
+          blockId: input.blockId,
+          patchId: patch.id,
+          proposals: [...changeset.proposals],
+          sceneSpans: ((ctx.accepted["sceneSpans"] as string[][] | undefined) ?? []).map((span) => [...span]),
+          dialogueUnits: [...windows.flatMap((window) => window.dialogueUnits), ...((ctx.accepted["dialogueUnits"] as string[][] | undefined) ?? [])].map((unit) => [...unit]),
+          turns: [...windows.flatMap((window) => window.turns), ...((ctx.accepted["turns"] as DialogueTurn[] | undefined) ?? []).filter((turn) => turn.sentenceIds.some((id) => ctx.windowSentenceIds.includes(id)))].map((turn) => ({ ...turn, sentenceIds: [...turn.sentenceIds] })),
+        });
       }
 
       windows.push({

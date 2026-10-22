@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { EventSink } from "../events/types.js";
 import { Database, Connection } from "@ladybugdb/core";
 import type { QueryResult } from "@ladybugdb/core";
@@ -403,9 +403,13 @@ export async function buildGraphFromBundle(
     catch (err) { if ((err as NodeJS.ErrnoException).code === "ENOENT") return []; throw err; }
     return raw.split("\n").filter((line) => line.trim()).map((line) => JSON.parse(line) as T);
   };
-  const store = new LadybugStore(dbPath);
+  await mkdir(dirname(dbPath), { recursive: true });
+  const temporary = await mkdtemp(join(dirname(dbPath), ".graph-build-"));
+  const temporaryPath = join(temporary, "graph.lbug");
+  const store = new LadybugStore(temporaryPath);
   let counts;
   try {
+    try {
     await store.initSchema();
 
     // The bundle is an append log: consumers fold by id, last write
@@ -444,7 +448,9 @@ export async function buildGraphFromBundle(
       relations: relApplied,
       branches: branches.length,
     };
-  } finally { await store.close(); }
+    } finally { await store.close(); }
+    await rename(temporaryPath, dbPath);
+  } finally { await rm(temporary, { recursive: true, force: true }); }
   await emit?.({ type: "graph.rebuilt", counts });
   return counts;
 }

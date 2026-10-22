@@ -7,6 +7,7 @@ import {
 } from "../maintenance/corrections.js";
 import {
   addNameForm,
+  appendAudit,
   mergeEntities,
   relate,
   removeEntity,
@@ -15,6 +16,7 @@ import {
   unrelate,
 } from "../maintenance/fixes.js";
 import type { NameForm, RelationType } from "../ontology/types.js";
+import { EXTRACTION_CONSTRAINTS_KEY, parseExtractionConstraints } from "../extraction/constraints.js";
 
 export interface FixResult {
   status: "ok";
@@ -97,12 +99,15 @@ export async function runFix(
     case "correct": {
       need(!!opts.block && !!opts.key && opts.value !== undefined,
         "correct <novel-dir> --block <blockId> --key <decision-key> --value <json-or-text> [--reason t]");
+      const value = parseValue(opts.value!);
+      if (opts.key === EXTRACTION_CONSTRAINTS_KEY) parseExtractionConstraints(value);
       const correction = await addCorrection(novelDir, {
         blockId: opts.block!,
         key: opts.key!,
-        value: parseValue(opts.value!),
+        value,
         reason: opts.reason ?? "",
       });
+      await appendAudit(novelDir, "correct", { correctionId: correction.id, blockId: correction.blockId, key: correction.key, value: correction.value }, correction.reason);
       detail = { pinned: `${correction.blockId} ${correction.key} = ${JSON.stringify(correction.value)}` };
       extra = { correction };
       rebuild = false;

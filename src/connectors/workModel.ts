@@ -35,6 +35,7 @@ export interface HttpWorkModelOptions {
   baseUrl: string;
   apiKey: string;
   model: string;
+  thinking?: "enabled" | "disabled";
   /** Per-attempt request timeout. Default 30s. */
   timeoutMs?: number;
   /** Extra attempts after the first for transient failures. Default 2. */
@@ -114,6 +115,7 @@ export class HttpWorkModel implements WorkModel {
       ],
     };
     if (request.maxTokens !== undefined) body.max_tokens = request.maxTokens;
+    if (this.opts.thinking) body.thinking = { type: this.opts.thinking };
     if (request.jsonSchema) {
       // OpenAI-compatible JSON mode: the endpoint guarantees a JSON
       // object; conformance to the caller's schema stays caller-side
@@ -224,5 +226,6 @@ export function workModelFromEnv(
     baseUrl: cfg.workLlm.baseUrl,
     apiKey: env.WORK_LLM_API_KEY!.trim(),
     model,
+    thinking: cfg.workLlm.provider === "deepseek" && model === "deepseek-flash" ? "disabled" : undefined,
   });
 }

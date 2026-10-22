@@ -65,7 +65,7 @@ export async function listChangeSets(novelDir: string): Promise<ChangeSet[]> {
     return [];
   }
   const out: ChangeSet[] = [];
-  for (const f of files.filter((x) => x.endsWith(".json")).sort()) {
+  for (const f of files.filter((x) => x.endsWith(".json") && !x.includes(".superseded-")).sort()) {
     out.push(
       JSON.parse(
         await readFile(join(changesetDir(novelDir), f), "utf8"),

@@ -29,8 +29,9 @@ two API keys (one work LLM + one decision model), and start.
 - **Storage:** a portable JSONL **bundle** is the source of truth;
   **Ladybug** (embedded property graph + Cypher, with native full-text
   and vector indexes) is the hot query engine rebuilt from it. One local
-  folder per novel. Internal naming is all English, so novels in any
-  language share one paradigm.
+  folder per novel. Schema keys and enum values are English; summaries
+  and entity names stay in the novel's language and original script.
+  The legacy `summaryEn` field holds source-language text.
 
 📐 **Design:** [DESIGN.md](DESIGN.md) ·
 🧠 **System 1 in detail (by sector):** [docs/system1/index.html](docs/system1/index.html) ·
@@ -177,7 +178,42 @@ agent pins the early decision that caused the cascade
 and `novel recall <novel-dir> <blockId>` re-runs just that block from
 the workspace's stored source with the pin honored.
 
+For an extraction-origin identity cascade, pin `extraction:constraints`
+with a JSON object containing `distinctNames` (groups of different
+identities, never aliases of one person), `rejectCharacterNames` (explicit
+invalid placeholders), and/or `instructions` (source-grounded guidance).
+Recall feeds this correction into extraction and the name resolver,
+preserves the superseded ChangeSet, and leaves a fresh held set for full
+review. Corrections and recalls are audited; an already approved block
+cannot be recalled without a canonical rollback plan.
+
+Large review packets support `novel changeset show <dir> <id> --summary`
+and `--offset 0 --limit 20`; follow `page.nextOffset` until null. Add
+`--notes` to page through review notes without truncating the Bash output.
+
+Live processing also writes owner-only, atomically replaced
+`working/<block-id>.json` snapshots after real Jev patches and each extracted
+scene. These are disposable, uncommitted working drafts: scene/dialogue
+decisions and candidate stubs can be rendered as ghosts immediately. They
+never update ontology files or bypass the merge gate. Final proposals still
+arrive in the normal persisted ChangeSet; the metadata-only processing log
+continues to exclude raw payloads and source quotes.
+
 ## Status
+
+### Optional Pi reviewer and real test report
+
+The [scoped Pi runner](tools/pi-review/README.md) loads the skill and uses
+only CLI commands to review, repair and apply blocks. It requires full
+source and current-revision proposal/note coverage before approval, keeps
+private checkpoints, supports explicit per-block repair budgets, and
+exports source-redacted native Pi session replay. It never auto-approves
+or starts a public tunnel. Its SDK dependencies are optional and separate
+from the CLI installation.
+
+The [2026-10-22 live integration report](docs/reports/pi-review-live-2026-10-22.md)
+records four chapter sections / six blocks, 2,558 supported proposals
+applied and 594 deferred, with limitations and separate offline tests.
 
 Read-only processing event streaming: `novel watch <novel-dir> [--port 4317]`
 serves loopback SSE from the workspace's processing `events.jsonl` (separate
@@ -187,6 +223,10 @@ or applies ChangeSets. The CLI ingest path **is** wired: `novel ingest
 <novel-dir> <file>` runs blocks -> miniloop -> ChangeSets -> merge gate
 (stops at the first gate by default; `--auto-approve` applies in-process),
 and the playground follows a run live via `?live=http://127.0.0.1:4317/events`.
+Re-running ingest with the same input and block size skips approved blocks
+with recorded application, preserving their ChangeSets and the remaining
+blocks' sentence provenance. An approval without an application record stops
+the run for inspection rather than silently replaying or skipping it.
 
 v0.1 skeleton (2026-10-21): founding design, Skill, CLI skeleton with
 working sectioning, decision-patch interfaces + v1 patches, ChangeSet /

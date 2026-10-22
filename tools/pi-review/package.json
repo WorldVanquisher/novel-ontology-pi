@@ -1,0 +1,8 @@
+{
+  "name": "novel-ontology-pi-review",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test *.test.mjs" },
+  "dependencies": { "@earendil-works/pi-coding-agent": "1.4.0" }
+}

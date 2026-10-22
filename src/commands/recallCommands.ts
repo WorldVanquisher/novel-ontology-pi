@@ -14,6 +14,7 @@ import {
 import { appendAudit } from "../maintenance/fixes.js";
 import { changesetDir, loadChangeSet } from "../merge/changesetStore.js";
 import type { Entity } from "../ontology/types.js";
+import { loadExtractionCounts } from "../processing/counts.js";
 
 /**
  * `novel recall <novel-dir> <blockId>` — the recall protocol
@@ -54,7 +55,16 @@ export async function runRecall(
       `No stored source in ${sourceDir} — recall needs the source copy that ingest saves. Re-run \`novel ingest\` once to populate it.`,
     );
   }
-  let block: { id: string; text: string; chapterIndex: number } | null = null;
+  const existing = await loadChangeSet(novelDir, `cs_${blockId}`);
+  if (existing?.status === "approved") throw new Error("Cannot recall an approved block without a canonical rollback plan; hold the new work for review instead.");
+  const history = await readFile(join(novelDir, "events.jsonl"), "utf8").catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== "ENOENT") throw error;
+    return "";
+  });
+  if (history.split("\n").filter(Boolean).map((line) => JSON.parse(line)).some((record) => record.event.type === "changeset.applied" && record.event.changesetId === `cs_${blockId}`)) {
+    throw new Error("Cannot recall an already applied block without a canonical rollback plan, even if its gate status was changed to held.");
+  }
+  let block: { id: string; text: string; chapterIndex: number; index: number } | null = null;
   for (const f of sourceFiles) {
     const text = await readFile(join(sourceDir, f), "utf8");
     const found = cutBlocks(text).find((b) => b.id === blockId);
@@ -79,7 +89,8 @@ export async function runRecall(
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     await copyFile(csPath, join(changesetDir(novelDir), `cs_${blockId}.superseded-${stamp}.json`));
     supersededKept = true;
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     supersededKept = false;
   }
 
@@ -91,14 +102,7 @@ export async function runRecall(
     for (const e of rows) byId.set(e.id, e);
     return [...byId.values()];
   };
-  const loadCounts = async (): Promise<{ events: number; scenes: number }> => {
-    const events = await bundle.loadFile<{ id: string }>("events.jsonl");
-    const scenes = await bundle.loadFile<{ id: string }>("scenes.jsonl");
-    return {
-      events: new Set(events.map((e) => e.id)).size,
-      scenes: new Set(scenes.map((s) => s.id)).size,
-    };
-  };
+  const loadCounts = () => loadExtractionCounts(novelDir, bundle);
   let workModel = undefined;
   try {
     workModel = workModelFromEnv(env);
@@ -115,7 +119,7 @@ export async function runRecall(
     workModel,
   });
   await processor.processNovel([
-    { blockId: block.id, text: block.text, chapterIndex: block.chapterIndex },
+    { blockId: block.id, text: block.text, chapterIndex: block.chapterIndex, sectionIndex: block.index },
   ]);
   await appendAudit(novelDir, "recall", {
     blockId,

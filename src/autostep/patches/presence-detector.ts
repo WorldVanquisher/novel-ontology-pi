@@ -1,6 +1,7 @@
 import type { DecisionQuestion } from "../../connectors/jev.js";
 import type { DecisionPatch, PatchContext, PatchOutcome } from "./types.js";
 import { EMPTY_OUTCOME } from "./types.js";
+import type { NameScanHit } from "./name-detector.js";
 
 /**
  * Presence Detector patch — "which characters are in a scene".
@@ -29,7 +30,7 @@ export const presenceDetector: DecisionPatch = {
       qs.push({
         key: `present:${id}`,
         primitive: "noul",
-        instructions: `Is character ${id} physically present and able to act/speak in this scene (not merely mentioned, remembered, or spoken about)?`,
+        instructions: `Is character ${id} (${ctx.knownEntities.find((entity) => entity.id === id)?.names.map((form) => form.text).join(" / ")}) physically present in the current window, rather than absent, merely mentioned, remembered or spoken about? A previous window's presence is not evidence for this window.`,
       });
     }
     return qs;
@@ -43,7 +44,7 @@ export const presenceDetector: DecisionPatch = {
       const id = a.key.slice("present:".length);
       const p = typeof a.value === "number" ? a.value : 0;
       if (p >= 0.5) present.push(id);
-      else mentioned.push(id);
+      else if (((ctx.accepted["nameHits"] as NameScanHit[] | undefined) ?? []).some((hit) => hit.entityId === id && ctx.windowSentenceIds.includes(hit.sentenceId))) mentioned.push(id);
     }
     ctx.accepted["charactersPresent"] = present;
     ctx.accepted["charactersMentioned"] = mentioned;

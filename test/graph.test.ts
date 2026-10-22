@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BundleStore } from "../src/connectors/bundle.js";
@@ -68,6 +68,33 @@ test("closed stores release the database across repeated writes and reopens", as
     for (const store of stores) await store.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("graph rebuild removes deleted bundle records and failed rebuild preserves the previous graph", async () => {
+  const root = await mkdtemp(join(tmpdir(), "novel-rebuild-"));
+  const ontologyDir = join(root, "ontology");
+  const dbPath = join(ontologyDir, "graph.lbug");
+  const bundle = new BundleStore(ontologyDir);
+  try {
+    await bundle.init({ novelId: "rebuild", title: "test", schemaVersion: 1, sourceLanguages: ["zh"], embeddingModel: null, embeddingDimension: null, decisionModel: "mock", blocksProcessed: 0 });
+    await bundle.upsertEntity(char("char_keep", "保留"));
+    await bundle.upsertEntity(char("char_drop", "删除"));
+    await bundle.upsertEvent(ev("evt_drop", 1, "将被删除的事件", ["char_drop"]));
+    await buildGraphFromBundle(ontologyDir, dbPath);
+    await writeFile(join(ontologyDir, "entities.jsonl"), JSON.stringify(char("char_keep", "保留")) + "\n");
+    await writeFile(join(ontologyDir, "events.jsonl"), "");
+    await buildGraphFromBundle(ontologyDir, dbPath);
+    const reader = new LadybugStore(dbPath);
+    try {
+      assert.equal(await reader.getEntity("char_drop"), null);
+      assert.equal((await reader.getEntity("char_keep"))?.id, "char_keep");
+      assert.deepEqual(await reader.run("MATCH (event:Event) RETURN event.id"), []);
+    } finally { await reader.close(); }
+    const original = await readFile(dbPath);
+    await writeFile(join(ontologyDir, "entities.jsonl"), "{invalid JSON\n");
+    await assert.rejects(buildGraphFromBundle(ontologyDir, dbPath));
+    assert.deepEqual(await readFile(dbPath), original);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("bundle -> ladybug build -> graph-only retrieval + changeset gate flow", async () => {
