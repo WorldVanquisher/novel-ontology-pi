@@ -78,12 +78,14 @@ test("persisted gate states precede their facts; failed writes cannot claim succ
   assert.equal(await readFile(log.path, "utf8"), before);
   assert.equal((await loadChangeSet(root, cs.id)).status, "approved");
   await mkdir(join(root, "ontology"));
-  await applyChangeSet(new BundleStore(join(root, "ontology")), approved, log.emit);
+  const materialized = await applyChangeSet(new BundleStore(join(root, "ontology")), approved, log.emit);
+  assert.deepEqual(materialized, { applied: 1, processed: 1, deferred: 0 });
   assert.equal((await readEventBatch(log.path, 0)).at(-1)!.event.type, "changeset.merged");
   assert.ok((await readFile(join(root, "ontology", "entities.jsonl"), "utf8")).includes("char_1"));
   assert.equal((await loadChangeSet(root, cs.id)).status, "approved"); // no invented merged status
   approved.proposals = [{ ...proposal(), kind: "add_alias" }];
-  await applyChangeSet(new BundleStore(join(root, "ontology")), approved, log.emit);
+  const deferred = await applyChangeSet(new BundleStore(join(root, "ontology")), approved, log.emit);
+  assert.deepEqual(deferred, { applied: 0, processed: 1, deferred: 1 });
   const last = (await readEventBatch(log.path, 0)).at(-1)!.event;
   assert.equal(last.type, "changeset.applied");
   if (last.type === "changeset.applied") assert.deepEqual(last.unsupportedProposalIds, ["p1"]);

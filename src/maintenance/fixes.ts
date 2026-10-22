@@ -146,7 +146,7 @@ export async function mergeEntities(
   for (const s of scenes) {
     const before = JSON.stringify(s);
     s.charactersPresent = dedupe(s.charactersPresent.map(remap));
-    s.charactersMentioned = dedupe(s.charactersMentioned.map(remap));
+    s.charactersMentioned = dedupe(s.charactersMentioned.map(remap)).filter((id) => !s.charactersPresent.includes(id));
     for (const t of s.turns) {
       if (t.speakerId) t.speakerId = remap(t.speakerId);
       if (t.addresseeId) t.addresseeId = remap(t.addresseeId);

@@ -21,7 +21,7 @@ export const speakerAttribution: DecisionPatch = {
     return units.map((u, i) => ({
       key: `speaker:${i}`,
       primitive: "choice" as const,
-      instructions: `Who speaks the dialogue in sentences ${u.join(", ")}?`,
+      instructions: `Who speaks the dialogue in sentences ${u.join(", ")}? Candidate identities: ${present.map((id) => `${id} = ${ctx.knownEntities.find((entity) => entity.id === id)?.names.map((form) => form.text).join(" / ")}`).join("; ")}. Select unknown unless supported by the text.`,
       criteria:
         "Use speech style, forms of address, the previous turn's speaker (dialogue usually alternates), and who the surrounding narration focuses on.",
       options: [...present, "narrator", "unknown"],

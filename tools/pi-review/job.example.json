@@ -1,0 +1,10 @@
+{
+  "chapters": 4,
+  "minutes": 90,
+  "limits": {
+    "recallsPerBlock": 2,
+    "pendingRevisionsPerBlock": 3,
+    "commands": 2000
+  },
+  "volumes": [{ "id": 1, "input": "./source.txt" }]
+}

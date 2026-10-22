@@ -13,7 +13,7 @@ export async function applyChangeSet(
   store: OntologyStore,
   changeset: ChangeSet,
   emit?: EventSink,
-): Promise<{ applied: number }> {
+): Promise<{ applied: number; processed: number; deferred: number }> {
   if (changeset.status !== "approved") {
     throw new Error(
       `Refusing to apply change set ${changeset.id}: status is ${changeset.status}, not approved.`,
@@ -42,14 +42,14 @@ export async function applyChangeSet(
     }
     applied++;
   }
-  if (emit) {
-    const unsupportedProposalIds = changeset.proposals
+  const unsupportedProposalIds = changeset.proposals
       .filter((p) => p.kind === "add_alias" || p.kind === "set_state_change")
       .map((p) => p.id);
+  if (emit) {
     await emit({ type: "changeset.applied", changesetId: changeset.id, target: "store", processed: applied, unsupportedProposalIds });
     // These two proposal kinds are still no-ops in the existing apply path.
     // Do not describe a partially materialized ChangeSet as merged.
     if (!unsupportedProposalIds.length) await emit({ type: "changeset.merged", changesetId: changeset.id, target: "store" });
   }
-  return { applied };
+  return { applied: applied - unsupportedProposalIds.length, processed: applied, deferred: unsupportedProposalIds.length };
 }

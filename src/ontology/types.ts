@@ -77,7 +77,7 @@ export interface OntEvent {
   /** Global order within the timeline; any value here is a valid fork point. */
   chronologicalOrder: number;
   eventType: EventType;
-  /** Semantics in English, regardless of the novel's language. */
+  /** Source-language summary; legacy field name retained for storage compatibility. */
   summaryEn: string;
   /** Original-language evidence quote, with provenance offsets. */
   evidence: { text: string; sentenceIds: string[] };

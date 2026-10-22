@@ -18,6 +18,8 @@ import { applyChangeSet } from "../merge/apply.js";
 import { saveChangeSet } from "../merge/changesetStore.js";
 import { EventLog } from "../events/log.js";
 import type { EventSink } from "../events/types.js";
+import { saveWorkingDraft, type WorkingDraft } from "./draft.js";
+import { EXTRACTION_CONSTRAINTS_KEY, parseExtractionConstraints } from "../extraction/constraints.js";
 
 export type ReviewDecision = "approved" | "held" | "revision_requested";
 
@@ -66,7 +68,7 @@ export class BlockProcessor {
        */
       workModel?: WorkModel;
       /** Distinct event/scene counts in the bundle, for ID/order sequencing. */
-      loadCounts?: () => Promise<{ events: number; scenes: number }>;
+      loadCounts?: () => Promise<{ events: number; scenes: number; reservedEntityIds?: string[] }>;
       /**
        * Recall corrections (sector 09): pinned decisions the reviewing
        * agent has issued for specific blocks. Loaded once per run; the
@@ -76,7 +78,7 @@ export class BlockProcessor {
     } = {},
   ) {}
 
-  async processNovel(blocks: { blockId: string; text: string; chapterIndex?: number }[]): Promise<{
+  async processNovel(blocks: { blockId: string; text: string; chapterIndex?: number; sectionIndex?: number }[]): Promise<{
     mergedBlocks: string[];
     stoppedAt: string | null;
     stopReason: string | null;
@@ -97,10 +99,20 @@ export class BlockProcessor {
       : [];
     for (const block of blocks) {
       await emit?.({ type: "block.started", blockId: block.blockId });
-      const { sentences } = sectionBlock(block.text, mergedBlocks.length);
+      const { sentences } = sectionBlock(block.text, block.sectionIndex ?? mergedBlocks.length);
       await emit?.({ type: "sectioned", blockId: block.blockId, sentences: sentences.length });
       let revisionRounds = 0;
       for (;;) {
+        let draft: WorkingDraft = {
+          version: 1, blockId: block.blockId, chapterIndex: block.chapterIndex ?? 0,
+          stage: "miniloop", patchId: "starting", updatedAt: new Date().toISOString(),
+          proposals: [], sceneSpans: [], dialogueUnits: [], turns: [], completedScenes: 0, totalScenes: 0,
+        };
+        const publish = async (update: Partial<WorkingDraft>) => {
+          draft = { ...draft, ...update, updatedAt: new Date().toISOString() };
+          if (this.observation.novelDir) await saveWorkingDraft(this.observation.novelDir, draft);
+        };
+        await publish({});
         const knownEntities = this.observation.loadKnownEntities
           ? await this.observation.loadKnownEntities()
           : [];
@@ -110,12 +122,14 @@ export class BlockProcessor {
           knownEntities,
           stateSummary: `Processing block ${block.blockId}.`,
           pinnedAnswers: pinsForBlock(corrections, block.blockId),
+          onProgress: async (progress) => publish({ ...progress, totalScenes: progress.sceneSpans.length }),
         });
         for (const key of result.appliedPins ?? []) {
           result.changeset.reviewNotes[`recall:pin:${key}`] =
             "Decision pinned by a reviewing-agent correction (sector 09 recall); the miniloop honored the pin instead of its own judgment.";
         }
         if (extract) {
+          await publish({ stage: "extraction", patchId: "extraction" });
           // Sector 08: extraction reads the miniloop's structured
           // scenes and returns the block's FINAL proposal list —
           // stubs fleshed or dropped, aliases folded, events,
@@ -132,11 +146,16 @@ export class BlockProcessor {
             knownEntities,
             proposals: result.changeset.proposals,
             counts,
+            constraints: corrections.some((correction) => correction.blockId === block.blockId && correction.key === EXTRACTION_CONSTRAINTS_KEY)
+              ? parseExtractionConstraints(corrections.find((correction) => correction.blockId === block.blockId && correction.key === EXTRACTION_CONSTRAINTS_KEY)!.value)
+              : undefined,
+            onProgress: async (progress) => publish(progress),
           } satisfies ExtractionInput);
           result.changeset.proposals = out.proposals;
           Object.assign(result.changeset.reviewNotes, out.notes);
         }
         if (this.observation.novelDir) await saveChangeSet(this.observation.novelDir, result.changeset);
+        await publish({ stage: "gate", patchId: "merge-gate", proposals: result.changeset.proposals });
         // No event emissions here: saveChangeSet is the emitter of record
         // for proposal.added / changeset.<status> — it fires them only
         // after the persisted state is visible, deduped by status change.

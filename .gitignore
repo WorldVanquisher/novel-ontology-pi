@@ -5,3 +5,4 @@ dist/
 *.lbug.wal
 novels/*/ontology/graph.lbug*
 .DS_Store
+.pi-review/

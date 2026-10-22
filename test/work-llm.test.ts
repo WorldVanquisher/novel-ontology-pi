@@ -136,6 +136,14 @@ test("work model: generate returns content and reports usage + latency", async (
   assert.equal(sent.body.response_format, undefined);
 });
 
+test("work model sends explicit thinking mode only when configured", async (context) => {
+  const mock = await startMock(context, okHandler);
+  await client(mock.baseUrl, { thinking: "disabled" }).generate({ system: "s", prompt: "p" });
+  await client(mock.baseUrl).generate({ system: "s", prompt: "p" });
+  assert.deepEqual((mock.requests[0].body as Record<string, unknown>).thinking, { type: "disabled" });
+  assert.ok(!("thinking" in (mock.requests[1].body as Record<string, unknown>)));
+});
+
 test("work model: jsonSchema asks for JSON mode; missing usage maps to nulls", async (t) => {
   const mock = await startMock(t, (req) =>
     completion('{"status":"ok"}', false),

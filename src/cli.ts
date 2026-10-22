@@ -39,6 +39,8 @@ import { buildGraphFromBundle, LadybugStore } from "./connectors/ladybug.js";
 import { BundleStore } from "./connectors/bundle.js";
 import { exportBundle, importBundle } from "./connectors/bundleTransfer.js";
 import { applyChangeSet } from "./merge/apply.js";
+import { reviewPage } from "./merge/reviewPage.js";
+import { reviseProposals } from "./merge/revise.js";
 import {
   listChangeSets,
   loadChangeSet,
@@ -62,8 +64,10 @@ const COMMANDS: Record<string, string> = {
   "novel recall <novel-dir> <blockId>":
     "Recall System 1 for one block: re-run it from the stored source with pinned corrections honored; a fresh held ChangeSet replaces the superseded one (kept for audit)",
   "novel miniloop run|inspect": "Run the Jev miniloop; inspect per-window decisions",
-  "novel changeset list|show|approve|hold <novel-dir> [id]":
+  "novel changeset list|show|approve|hold|revise <novel-dir> [id]":
     "The merge gate: review accumulated proposals before they touch the main graph",
+  "novel changeset show <novel-dir> <id> [--summary | --offset N --limit N [--notes]]":
+    "Read a bounded proposal or review-note page; follow page.nextOffset until null",
   "novel graph build <bundle-dir> [db-path]": "(Re)build the Ladybug store from the bundle",
   "novel graph query <db-path> <cypher>": "Raw Cypher against the Ladybug store",
   "novel graph stats <db-path>": "Node/relation counts per table",
@@ -264,7 +268,18 @@ async function main(): Promise<void> {
     const id = positional[3];
     if (!id) throw new Error(`changeset ${sub} needs a changeset id`);
     if (sub === "show") {
-      out(await loadChangeSet(novelDir, id), pretty);
+      const changeset = await loadChangeSet(novelDir, id);
+      const options = positional.slice(4);
+      for (let index = 0; index < options.length; index++) {
+        if (["--summary", "--notes"].includes(options[index])) continue;
+        if (["--offset", "--limit"].includes(options[index]) && /^\d+$/.test(options[index + 1] ?? "")) { index++; continue; }
+        throw new Error("Usage: novel changeset show <novel-dir> <id> [--summary | --offset N --limit N [--notes]]");
+      }
+      out(options.length ? reviewPage(changeset, {
+        offset: flag(options, "--offset") === undefined ? undefined : Number(flag(options, "--offset")),
+        limit: flag(options, "--limit") === undefined ? undefined : Number(flag(options, "--limit")),
+        notes: options.includes("--notes"), summary: options.includes("--summary"),
+      }) : changeset, pretty);
       return;
     }
     if (sub === "hold") {
@@ -272,11 +287,18 @@ async function main(): Promise<void> {
       out({ id: cs.id, status: cs.status }, pretty);
       return;
     }
+    if (sub === "revise") {
+      const options = positional.slice(4);
+      if (options.length !== 4 || !flag(options, "--edits") || !flag(options, "--reason")) throw new Error("Usage: novel changeset revise <dir> <id> --edits '<JSON>' --reason '<source-grounded reason>'");
+      for (let index = 0; index < options.length; index += 2) if (!["--edits", "--reason"].includes(options[index])) throw new Error("Unsupported revision option.");
+      out(await reviseProposals(novelDir, id, JSON.parse(flag(options, "--edits")!), flag(options, "--reason")!), pretty);
+      return;
+    }
     if (sub === "approve") {
       const ontologyDir = join(novelDir, "ontology");
       let cs = await setChangeSetStatus(novelDir, id, "approved");
       const bundle = new BundleStore(ontologyDir);
-      const { applied } = await applyChangeSet(bundle, cs, new EventLog(novelDir).emit);
+      const { applied, processed, deferred } = await applyChangeSet(bundle, cs, new EventLog(novelDir).emit);
       const counts = await buildGraphFromBundle(
         ontologyDir,
         join(ontologyDir, "graph.lbug"),
@@ -284,7 +306,7 @@ async function main(): Promise<void> {
       );
       cs = await loadChangeSet(novelDir, id);
       out(
-        { id: cs.id, status: cs.status, applied, graph: counts },
+        { id: cs.id, status: cs.status, applied, processed, deferred, graph: counts },
         pretty,
       );
       return;
