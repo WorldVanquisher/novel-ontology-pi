@@ -104,9 +104,11 @@ local mock server and run for free with a dummy `WORK_LLM_API_KEY`.
 The key is reported as status only (`configured`) and never printed.
 A missing key, model, or base URL is a specific error, not a silent
 skip. Transient failures (5xx, network) are retried with backoff;
-4xx is not retried; each attempt times out after 30s. These commands
-are plumbing only — the client is wired into `ingest` when the
-per-scene extraction step lands (the miniloop already runs live).
+4xx is not retried; each attempt times out after 30s. The client is
+wired into `ingest`: when `WORK_LLM_*` is configured, the per-scene
+extraction step (sector 08) runs between the miniloop and the merge
+gate — `--no-extract` forces it off, and the ingest result reports
+`extraction: "live" | "off"` so its absence is never silent.
 
 ## Jev key management: `jev login` / `status` / `logout` / `ping`
 

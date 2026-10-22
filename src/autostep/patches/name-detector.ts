@@ -1,4 +1,5 @@
 import type { DecisionQuestion } from "../../connectors/jev.js";
+import type { Entity } from "../../ontology/types.js";
 import type { DecisionPatch, PatchContext, PatchOutcome } from "./types.js";
 import { EMPTY_OUTCOME } from "./types.js";
 import type { ChangeProposal } from "../../merge/changeset.js";
@@ -24,6 +25,61 @@ export interface NameScanHit {
   sentenceId: string;
   entityId: string;
   matchedText: string;
+}
+
+export interface CandidateNomination {
+  span: string;
+  sentenceId: string;
+}
+
+/**
+ * Candidate nomination — the code-first half of candidate generation
+ * (decision sheet, sector 04): cheap surface patterns nominate spans
+ * that MIGHT be names; a zero-context LLM call then extracts the name
+ * form, and Jev judges new-vs-nickname. Code never decides — it only
+ * nominates, so false positives cost one Jev question, never a bad
+ * merge.
+ *
+ * v1 patterns (Chinese-first, tuned for light-novel prose):
+ *  - honorific/title suffixes: 小樱小姐, 王老师, 美琴大人 …
+ *  - speech-verb adjacency: 白井黑子说道 / 问道 / 笑道 …
+ * Spans already covered by the registry are skipped — a known name is
+ * a scan hit, never a candidate.
+ */
+const SUFFIX_PATTERN =
+  /([一-鿿]{1,4}?)(小姐|先生|女士|老师|队长|桑|酱|君|大人|殿下|阁下|师傅|医生)/g;
+const SPEECH_PATTERN =
+  /([一-鿿]{2,4})(说道|问道|答道|笑道|喊道|叫道|低声道|轻声道|开口道)/g;
+const GENERIC_SPANS = new Set([
+  "姐姐", "哥哥", "妹妹", "弟弟", "大家", "我们", "你们", "他们",
+  "这时", "此时", "于是", "然后", "笑着", "想了想",
+]);
+const MAX_NOMINATIONS = 24;
+
+export function nominateCandidateSpans(
+  sentences: { id: string; text: string }[],
+  knownEntities: Entity[],
+): CandidateNomination[] {
+  const knownForms = knownEntities.flatMap((e) => e.names.map((n) => n.text));
+  const isKnown = (span: string) =>
+    knownForms.some((f) => f === span || f.includes(span) || span.includes(f));
+  const seen = new Set<string>();
+  const out: CandidateNomination[] = [];
+  const consider = (span: string, sentenceId: string) => {
+    if (out.length >= MAX_NOMINATIONS) return;
+    if (span.length < 2 || GENERIC_SPANS.has(span) || seen.has(span)) return;
+    if (isKnown(span)) return;
+    seen.add(span);
+    out.push({ span, sentenceId });
+  };
+  for (const s of sentences) {
+    for (const m of s.text.matchAll(SUFFIX_PATTERN)) consider(m[1], s.id);
+    for (const m of s.text.matchAll(SPEECH_PATTERN)) {
+      const span = m[1];
+      if (!/[着了的]$/.test(span)) consider(span, s.id);
+    }
+  }
+  return out;
 }
 
 export function scanKnownNames(ctx: PatchContext): NameScanHit[] {

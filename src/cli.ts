@@ -47,8 +47,8 @@ const COMMANDS: Record<string, string> = {
   "novel watch <novel-dir> [--port N]": "Read-only loopback SSE over the processing event log",
   "novel section <file>": "Deterministic sentence sectioning only (free, testable)",
   "novel blocks <file> [--size N]": "Chapter detection + block cutting map (no models)",
-  "novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N]":
-    "Full loop: blocks -> miniloop (live Jev) -> ChangeSets -> merge gate -> graph. Default stops at the first gate; --auto-approve applies every ChangeSet",
+  "novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N] [--no-extract]":
+    "Full loop: blocks -> miniloop (live Jev) -> extraction (work LLM, when configured) -> ChangeSets -> merge gate -> graph. Default stops at the first gate; --auto-approve applies every ChangeSet",
   "novel miniloop run|inspect": "Run the Jev miniloop; inspect per-window decisions",
   "novel changeset list|show|approve|hold <novel-dir> [id]":
     "The merge gate: review accumulated proposals before they touch the main graph",
@@ -284,7 +284,7 @@ async function main(): Promise<void> {
     const file = positional[2];
     if (!novelDir || !file || file.startsWith("--")) {
       throw new Error(
-        "Usage: novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N]",
+        "Usage: novel ingest <novel-dir> <file> [--auto-approve] [--max-blocks N] [--block-size N] [--no-extract]",
       );
     }
     const maxBlocksRaw = flag(positional, "--max-blocks");
@@ -302,6 +302,7 @@ async function main(): Promise<void> {
         autoApprove: positional.includes("--auto-approve"),
         maxBlocks,
         blockSize,
+        noExtract: positional.includes("--no-extract"),
       }),
       pretty,
     );
