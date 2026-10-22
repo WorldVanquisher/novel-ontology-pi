@@ -46,6 +46,27 @@ proposed changes to the ontology main graph. Nothing is merged yet.**
 2. **Review it like an editor, not a rubber stamp.** You hold the context
    the miniloop cannot: earlier chapters, the user's intent, naming
    consistency, character identity across aliases and languages.
+   Your review toolkit, in order:
+   - `novel match <novel-dir> [--changeset <id>]` — the entity-matching
+     packet. Code nominates duplicate pairs; System 1 reviews the batch
+     with a checklist and settles what it can. **Confident** pairs come
+     with a ready `novel fix merge` command; **uncertain** pairs are
+     your real work — decide them from context; rejected/distinct pairs
+     need nothing.
+   - `novel query <novel-dir> <cypher>` — interrogate the ontology when
+     a proposal's truth depends on what is already canon.
+   - `novel fix …` — pointwise repairs, all audited in
+     `maintenance.jsonl` with the graph rebuilt after each: `merge`
+     two entities, `rename`, `add-form`, `relate` / `unrelate`,
+     `remove-entity`, `remove-event`. Small wrongs get small fixes —
+     never re-run a block for a typo.
+   - **Recall, for cascades:** when a whole subtree is wrong, trace it
+     to the earliest System 1 decision that caused it (proposal
+     provenance names the patch and sentences) and pin that decision:
+     `novel fix correct <novel-dir> --block <id> --key <decision-key>
+     --value <v> --reason <...>`, then `novel recall <novel-dir>
+     <blockId>` re-runs just that block with the pin honored. The
+     superseded ChangeSet is kept for audit.
 3. Decide:
    - `novel changeset approve <id>` — merge into the main graph, roll on.
    - `novel changeset hold <id>` — pause and tell the user why.

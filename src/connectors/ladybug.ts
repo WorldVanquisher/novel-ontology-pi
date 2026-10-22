@@ -408,13 +408,23 @@ export async function buildGraphFromBundle(
   try {
     await store.initSchema();
 
-    const entities = await load<Entity>("entities.jsonl");
+    // The bundle is an append log: consumers fold by id, last write
+    // wins (an alias fold or a fix appends a fresh row for an existing
+    // entity). Fold here too — inserting and counting raw rows would
+    // double-count every updated record.
+    const foldById = <T extends { id: string }>(rows: T[]): T[] => {
+      const byId = new Map<string, T>();
+      for (const r of rows) byId.set(r.id, r);
+      return [...byId.values()];
+    };
+    const entities = foldById([
+      ...(await load<Entity>("entities.jsonl")),
+      ...(await load<Entity>("timelines.jsonl")),
+    ]);
     for (const e of entities) await store.upsertEntity(e);
-    const timelines = await load<Entity>("timelines.jsonl");
-    for (const t of timelines) await store.upsertEntity(t);
-    const events = await load<OntEvent>("events.jsonl");
+    const events = foldById(await load<OntEvent>("events.jsonl"));
     for (const ev of events) await store.upsertEvent(ev);
-    const scenes = await load<Scene>("scenes.jsonl");
+    const scenes = foldById(await load<Scene>("scenes.jsonl"));
     for (const s of scenes) await store.upsertScene(s);
     const relations = await load<Relation>("relations.jsonl");
     let relApplied = 0;
@@ -428,7 +438,7 @@ export async function buildGraphFromBundle(
     const branches = await load<Branch>("branches.jsonl");
     for (const b of branches) await store.createBranch(b);
     counts = {
-      entities: entities.length + timelines.length,
+      entities: entities.length,
       events: events.length,
       scenes: scenes.length,
       relations: relApplied,

@@ -1,11 +1,12 @@
-import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { copyFile, mkdir, readFile, stat } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { cutBlocks } from "../text/blocks.js";
 import { BlockProcessor, type ReviewDecision } from "../processing/blockProcessor.js";
 import { BundleStore } from "../connectors/bundle.js";
 import { buildGraphFromBundle } from "../connectors/ladybug.js";
 import { jevFromEnv } from "../connectors/jev.js";
 import { workModelFromEnv, type HttpWorkModel } from "../connectors/workModel.js";
+import { loadCorrections } from "../maintenance/corrections.js";
 import { resolveJevKey } from "../connectors/secrets.js";
 import { EventLog } from "../events/log.js";
 import type { Entity } from "../ontology/types.js";
@@ -62,6 +63,12 @@ export async function ingestNovel(
   }
 
   const text = await readFile(file, "utf8");
+  // Keep a copy of the source inside the workspace: the recall
+  // protocol (sector 09) re-runs a single block from it, in a later
+  // session, without the original file at hand.
+  const sourceDir = join(novelDir, "source");
+  await mkdir(sourceDir, { recursive: true });
+  await copyFile(file, join(sourceDir, basename(file)));
   const allBlocks = cutBlocks(text, opts.blockSize);
   const blocks = opts.maxBlocks ? allBlocks.slice(0, opts.maxBlocks) : allBlocks;
 
@@ -101,6 +108,7 @@ export async function ingestNovel(
     emit: log.emit,
     loadKnownEntities,
     loadCounts,
+    loadCorrections: () => loadCorrections(novelDir),
     workModel: workModel ?? undefined,
   });
 

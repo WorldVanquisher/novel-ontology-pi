@@ -61,6 +61,9 @@ memories and capabilities — reviews: <b>approve</b> the merge, <b>hold</b> it,
   <li><b>Enforced in code, not convention:</b> <code>applyChangeSet</code> refuses any ChangeSet whose status is not <code>approved</code>. There is no other code path from proposals to the store.</li>
   <li><b>The audit trail:</b> every proposal carries block ID, sentence IDs, producing patch, and confidence. Every node in the graph can answer: which block, which sentences, which patch, what confidence, whose approval.</li>
   <li><b>A natural end:</b> when the last block the user asked for merges, ingestion is done — the loop terminates on the work, not on a timer.</li>
+  <li><b>Review is staged (decided 2026-10-22):</b> before the agent deliberates, System 1 pre-reviews the batch itself. Entity matching is the first stage: code nominates duplicate pairs (shared forms, script-variant folds, containment, near-identical forms), and one batched Jev checklist per batch (same entity? treated as distinct? mere form variant?) routes them — confident pairs arrive as ready merge fixes, only unsettled pairs are raised to the agent as real requests. Duplicates are the known failure mode of extraction; they are settled at the gate, not inside the extractor.</li>
+  <li><b>Pointwise before wholesale:</b> small errors are fixed pointwise by the agent over the bundle (<code>novel fix merge|rename|add-form|relate|unrelate|remove-entity|remove-event</code>), each fix audited in <code>maintenance.jsonl</code> with the graph rebuilt after it. A block is never re-run for a typo.</li>
+  <li><b>Recall nominates the chain:</b> when an entire subtree is wrong midway, the agent traces the cascade to the earliest decision that caused it, pins that decision (<code>novel fix correct --block --key --value</code>), and recalls System 1 (<code>novel recall</code>): the block re-runs from the stored source with the pin honored and logged, producing a fresh ChangeSet; the superseded one is kept for audit.</li>
 </ul>
 
 <h2>Implementation</h2>
@@ -69,6 +72,7 @@ memories and capabilities — reviews: <b>approve</b> the merge, <b>hold</b> it,
   <li><code>src/merge/apply.ts</code> — the single apply path, status-checked.</li>
   <li><code>src/processing/blockProcessor.ts</code> — the roll: section → miniloop → extract → review callback → apply / stop / revise (max 2 revision rounds in the skeleton, then it asks the user).</li>
   <li>The Skill teaches the agent its reviewer duties: <code>skills/novel-ontology/SKILL.md</code>.</li>
+  <li>Review tooling (2026-10-22): <code>src/matching/entityMatch.ts</code> + <code>novel match</code> — duplicate nomination + the System 1 batch checklist; <code>src/maintenance/fixes.ts</code> + <code>novel fix …</code> — audited pointwise repairs with graph rebuild; <code>src/maintenance/corrections.ts</code> + <code>novel recall</code> — pinned decisions honored on a single-block re-run.</li>
 </ul>
 
 <h2>Open questions — the merge gate</h2>
