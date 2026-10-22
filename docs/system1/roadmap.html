@@ -18,7 +18,7 @@ is decided earlier than it needs to be.</p>
 <div class="panel" style="border-color:var(--teal)">
   <b>Update rule:</b> this page is updated in GitHub <b>every time something is completed</b> —
   phase statuses and the decision log here are the project's progress record of truth.
-  <span style="color:var(--dim)">Last updated: 2026-10-21 · Phase 1 core implemented; sector 13 (playground frontend, Reagraph) designed with animated demo; model wiring waits on keys.</span>
+  <span style="color:var(--dim)">Last updated: 2026-10-21 · Phase 1 core implemented; sector 13 playground frontend v1 built and merged (PR #4); model wiring waits on keys.</span>
 </div>
 
 <div class="rtl">
@@ -57,7 +57,7 @@ is decided earlier than it needs to be.</p>
       <li><b>Story-so-far digest</b> (07): cross-window memory in the state summary</li>
     </ul>
     <p class="mile">Milestone: the miniloop's decisions are measured, not hoped — precision/recall known per patch.</p>
-    <p style="color:var(--dim);font-size:13px">Parallel track — <b>Playground frontend</b> (13): event emission from the CLI + Live Theater v1 on Reagraph, so ingestion becomes watchable as soon as live models land. <b>Started 2026-10-21:</b> testing frontend scaffolded in <code>apps/playground</code> (unified one-world view, demo event source behind the real EventSource interface, gate queue with distinct held-ghost state) — up for review as a PR on branch <code>feat/playground-frontend</code>.</p>
+    <p style="color:var(--dim);font-size:13px">Parallel track — <b>Playground frontend</b> (13): event emission from the CLI + Live Theater v1 on Reagraph, so ingestion becomes watchable as soon as live models land. <b>Landed 2026-10-21:</b> the frontend v1 is built and merged to main (PR #4) — unified one-world view in <code>apps/playground</code> (three.js via Reagraph, React 19), reading local bundle files (<code>public/db/novel/</code>) behind the real EventSource interface, gate queue with distinct held-ghost state, verified end-to-end headlessly. Next on this track: the CLI's event emission (<code>novel watch</code> / SSE) so the same UI runs on live ingestion.</p>
   </div>
 
   <div class="rphase">
