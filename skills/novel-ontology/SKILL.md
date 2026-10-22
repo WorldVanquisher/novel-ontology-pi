@@ -61,3 +61,13 @@ without keys. Missing credentials require secure entry, never chat.
 - `novel bundle export <dir> <out>` / `import <bundle> <new-dir>` share
   portable ontology data. Fork/simulate commands are separate operations;
   choose a branch point only when requested by the user.
+
+## Measure
+
+- `novel inspect <dir>` reports bundle counts, coverage and reference
+  integrity without repairing data or opening the graph.
+- `novel eval run <dataset-dir> <predictions-dir>` reports precision,
+  recall, F1 and missed/spurious keys using the format and matching rules
+  in README's "Measuring" section. It makes no model calls, sets no
+  thresholds and does not grade results; interpretation stays with the
+  maintainer.

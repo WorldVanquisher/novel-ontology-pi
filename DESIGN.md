@@ -192,6 +192,10 @@ novel bundle export|import         portable ontology in / out
 novel graph build|reindex          (re)build Ladybug from the bundle
 novel llm ping|probe               work-LLM plumbing smoke tests (tiny
                                    completions; not wired into ingest)
+novel inspect <novel-dir>          corpus diagnostics over the bundle
+                                   (counts, coverage, integrity tallies)
+novel eval run <dataset> <preds>   golden-chapter scoring of prediction
+                                   files (precision/recall; metrics only)
 novel config                       model routing (keys via secure entry)
 ```
 JSON out by default, `--pretty` for humans.

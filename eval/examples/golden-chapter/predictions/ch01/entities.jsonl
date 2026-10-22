@@ -1,0 +1,3 @@
+{"id":"ent_001","kind":"Character","names":[{"text":"Mara Voss","lang":"en","kind":"canonical"}],"properties":{},"confidence":0.9}
+{"id":"ent_002","kind":"Character","names":[{"text":"Tobin Hale","lang":"en","kind":"canonical"}],"properties":{},"confidence":0.9}
+{"id":"ent_003","kind":"Character","names":[{"text":"Stationmaster","lang":"en","kind":"canonical"}],"properties":{},"confidence":0.4}

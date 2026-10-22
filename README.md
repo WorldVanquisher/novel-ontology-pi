@@ -133,6 +133,83 @@ System One wire format with the model pinned (`JEV_MODEL`, default
 `jev-1.13.0`); transient failures (429/529/5xx, network) retry with
 backoff, other 4xx fail at once.
 
+## Measuring: `inspect` and `eval run`
+
+Phase 2 measurement tooling — numbers only. Nothing in this section
+sets or checks a threshold: what the numbers mean, and what (if
+anything) they should gate, is the maintainer's decision.
+
+### `novel inspect <novel-dir>` — corpus diagnostics
+
+```bash
+node dist/src/cli.js inspect path/to/novel --pretty
+```
+
+Reads the bundle JSONL + manifest (the source of truth; the Ladybug
+graph is never opened — the report only notes whether `graph.lbug`
+exists) and reports: the manifest summary; source-corpus size
+(files, bytes, characters, chapters and blocks per the deterministic
+text tools); ontology counts by kind/type/timeline/chapter; coverage
+tallies (events with evidence, events placed on known timelines,
+entities with canonical names, unresolved dialogue turns); integrity
+tallies (relation endpoints and other references pointing at ids that
+do not exist in the bundle — counted, never repaired); branch and
+ChangeSet tallies. Counts and ratios of stored data only — no quality
+judgments, no semantic validation. A corrupt JSONL line is an error
+naming the file and line; missing optional files read as clean zeroes.
+
+### Golden-chapter eval datasets
+
+A dataset is a directory:
+
+```
+my-dataset/
+  dataset.json          { "name": "...", "chapters": [
+                            { "id": "ch01", "source": "chapters/ch01.txt",
+                              "golden": "golden/ch01" } ] }
+  chapters/ch01.txt     the chapter's source text
+  golden/ch01/          expected records, in bundle record shapes:
+    entities.jsonl  relations.jsonl  events.jsonl
+```
+
+Golden files use exactly the bundle's JSONL shapes
+(`src/ontology/types.ts`). Every scored kind needs its file — write an
+empty file for a kind with no records. A worked example ships in
+`eval/examples/golden-chapter/` (one hand-written chapter, expected
+records, and sample predictions).
+
+### `novel eval run <dataset-dir> <predictions-dir>` — precision/recall
+
+Predictions are *data*: a directory with one subfolder per chapter id,
+each holding `entities.jsonl` / `relations.jsonl` / `events.jsonl` in
+the same shapes. Anything can produce them — a recorded pipeline run,
+a mock, a future live run. The runner never calls a model. A missing
+chapter folder or kind file in the predictions counts as "predicted
+nothing"; unknown chapter folders or unknown `.jsonl` files are
+errors (they would silently corrupt the scores).
+
+Matching is per chapter and kind, in two passes:
+
+1. **Exact id** — a predicted record whose `id` equals a golden
+   record's `id` matches it (recorded runs keep their ids).
+2. **Semantic key** over the leftovers:
+   - entity: `entity:<kind>:<canonical name>` (the `names[]` entry
+     with kind `canonical`, else the first name)
+   - relation: `relation:<type>:<from>-><to>`, where each endpoint is
+     the semantic key of the record it references *in the same chapter
+     and side* (golden relations resolve against golden records), or
+     `id:<raw id>` when the endpoint doesn't resolve
+   - event: `event:<timelineId>:<summary>`, the summary normalized
+     (trimmed, whitespace-collapsed, lowercased)
+
+Matching is a multiset match — duplicate keys pair off one-for-one.
+The report gives TP/FP/FN and precision/recall/F1 per kind and overall
+(and per chapter), plus the missed and spurious record keys so a
+human can inspect every disagreement. Precision is `null` when
+nothing was predicted for a slice; recall is `null` when the slice
+has no golden records. A completed scoring run exits 0 whatever the
+numbers are — non-zero exits mean usage, IO, or format errors only.
+
 ## Sharing a novel: bundle export / import
 
 The JSONL bundle is the source of truth, so sharing a novel = moving the

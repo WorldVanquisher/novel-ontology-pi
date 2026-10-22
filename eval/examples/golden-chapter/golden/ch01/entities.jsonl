@@ -1,0 +1,3 @@
+{"id":"char_mara","kind":"Character","names":[{"text":"Mara Voss","lang":"en","kind":"canonical"}],"properties":{},"confidence":1}
+{"id":"char_tobin","kind":"Character","names":[{"text":"Tobin Hale","lang":"en","kind":"canonical"}],"properties":{},"confidence":1}
+{"id":"loc_platform","kind":"Location","names":[{"text":"Station Platform","lang":"en","kind":"canonical"}],"properties":{},"confidence":1}
