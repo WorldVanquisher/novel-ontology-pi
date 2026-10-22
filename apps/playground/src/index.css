@@ -62,19 +62,19 @@ h1 { font-size: clamp(28px, 2.8vw, 40px); letter-spacing: -.045em; line-height: 
 .scene-legend i.held { background: #819398; }
 .scene-legend button { margin-left: 14px; font-size: 9px; padding: 4px; }
 .labels-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
-.node-label { position: absolute; top: 0; left: 0; width: 92px; padding: 6px; display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: transparent; pointer-events: none; line-height: 1.4; will-change: transform; }
-.node-label:hover { background: #29362d; }
+.node-label { position: absolute; top: 0; left: 0; width: 92px; padding: 6px; display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: transparent; pointer-events: none; line-height: 1.4; text-shadow: 0 1px 3px #0b120e, 0 0 8px #0b120e80; will-change: transform; }
+.node-label:hover { background: transparent; }
 .node-label .node-code { font-size: 7px; color: var(--dim); letter-spacing: .08em; margin-bottom: 6px; }
 .node-label b { font-size: 14px; font-weight: 650; letter-spacing: -.025em; white-space: nowrap; }
 .node-label > span:last-child { font-size: 8px; margin-top: 6px; color: var(--dim); }
 .node-label.is-selected b { text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--olive); }
-.node-updates { position: absolute; top: calc(100% + 7px); left: 6px; padding: 2px 4px; color: #dbbd83; background: #4f422a; font-size: 7px; font-style: normal; white-space: nowrap; }
-.node-label:not(.k-bigEvent) { width: max-content; max-width: 120px; padding: 3px 6px; background: rgba(29, 37, 32, .94); }
+.node-updates { position: absolute; top: calc(100% + 7px); left: 6px; padding: 2px 4px; color: #dbbd83; font-size: 7px; font-style: normal; white-space: nowrap; }
+.node-label:not(.k-bigEvent) { width: max-content; max-width: 120px; padding: 3px 6px; }
 .node-label:not(.k-bigEvent) b { font-size: 12px; }
 .node-label:not(.k-bigEvent) .node-code { display: none; }
 .node-label.k-character.s-canon > span:last-child { display: none; }
-.node-label.s-proposed { background: #56462d; }
-.node-label.s-held { background: #394044; }
+.node-label.s-proposed, .node-label.s-proposed > span:last-child { color: var(--amber); }
+.node-label.s-held, .node-label.s-held > span:last-child { color: #a8bcc3; }
 .track-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2; }
 .track-label { position: absolute; top: 0; left: 0; visibility: hidden; font-size: 9px; color: var(--dim); white-space: nowrap; letter-spacing: .06em; }
 .track-label small { display: block; margin-top: 4px; font-size: 6px; color: var(--faint); letter-spacing: .12em; }
