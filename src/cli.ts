@@ -15,6 +15,7 @@ import { cutBlocks } from "./text/blocks.js";
 import { initWorkspace } from "./workspace/init.js";
 import { buildGraphFromBundle, LadybugStore } from "./connectors/ladybug.js";
 import { BundleStore } from "./connectors/bundle.js";
+import { exportBundle, importBundle } from "./connectors/bundleTransfer.js";
 import { applyChangeSet } from "./merge/apply.js";
 import {
   listChangeSets,
@@ -38,7 +39,10 @@ const COMMANDS: Record<string, string> = {
   "novel timeline list|show": "Browse time points (chapter / event, by importance)",
   "novel fork create --at <event-id> --label <name>": "Fork a parallel universe at a time point",
   "novel simulate <character> [--branch <id>]": "Character simulation on canon or a branch",
-  "novel bundle export|import": "Portable ontology bundle in/out",
+  "novel bundle export <novel-dir> <out-dir>":
+    "Export the portable bundle (JSONL + manifest; graph DB and secrets excluded)",
+  "novel bundle import <bundle-dir> <target-dir>":
+    "Import a bundle into a new novel dir (validates first; never overwrites)",
   "novel graph reindex": "Deferred: no vector/FTS indexes in the graph-first phase",
   "novel config": "Show model routing config (keys via env / secure entry only)",
 };
@@ -184,6 +188,18 @@ async function main(): Promise<void> {
       );
       return;
     }
+  }
+
+  if (cmd === "bundle" && sub === "export" && positional[2] && positional[3]) {
+    const result = await exportBundle(positional[2], positional[3]);
+    out({ status: "exported", ...result }, pretty);
+    return;
+  }
+
+  if (cmd === "bundle" && sub === "import" && positional[2] && positional[3]) {
+    const result = await importBundle(positional[2], positional[3]);
+    out({ status: "imported", ...result }, pretty);
+    return;
   }
 
   // Everything else is specified in DESIGN.md and lands incrementally.
