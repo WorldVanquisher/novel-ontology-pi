@@ -1,6 +1,7 @@
 import type { OntologyStore } from "../ontology/store.js";
 import type { ChangeSet } from "./changeset.js";
 import type { Entity, OntEvent, Relation, Scene } from "../ontology/types.js";
+import type { EventSink } from "../events/types.js";
 
 /**
  * Applies an APPROVED ChangeSet to the ontology main graph.
@@ -11,6 +12,7 @@ import type { Entity, OntEvent, Relation, Scene } from "../ontology/types.js";
 export async function applyChangeSet(
   store: OntologyStore,
   changeset: ChangeSet,
+  emit?: EventSink,
 ): Promise<{ applied: number }> {
   if (changeset.status !== "approved") {
     throw new Error(
@@ -39,6 +41,15 @@ export async function applyChangeSet(
         break;
     }
     applied++;
+  }
+  if (emit) {
+    const unsupportedProposalIds = changeset.proposals
+      .filter((p) => p.kind === "add_alias" || p.kind === "set_state_change")
+      .map((p) => p.id);
+    await emit({ type: "changeset.applied", changesetId: changeset.id, target: "store", processed: applied, unsupportedProposalIds });
+    // These two proposal kinds are still no-ops in the existing apply path.
+    // Do not describe a partially materialized ChangeSet as merged.
+    if (!unsupportedProposalIds.length) await emit({ type: "changeset.merged", changesetId: changeset.id, target: "store" });
   }
   return { applied };
 }

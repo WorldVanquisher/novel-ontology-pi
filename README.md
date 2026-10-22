@@ -95,6 +95,12 @@ node dist/src/cli.js graph build <target-dir>/ontology       # rebuild the graph
 
 ## Status
 
+Read-only processing event streaming: `novel watch <novel-dir> [--port 4317]`
+serves loopback SSE from the workspace's processing `events.jsonl` (separate
+from `ontology/events.jsonl`). See the [contract draft and SSH setup](docs/playground-events-watch.md)
+for replay, integration limits, and frontend questions. `watch` never reviews
+or applies ChangeSets; the CLI ingest path is still not wired.
+
 v0.1 skeleton (2026-10-21): founding design, Skill, CLI skeleton with
 working sectioning, decision-patch interfaces + v1 patches, ChangeSet /
 merge-gate machinery, ontology schema v1, and connector interfaces for

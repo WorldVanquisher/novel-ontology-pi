@@ -8,7 +8,9 @@
  * All commands print JSON by default; add --pretty for humans.
  */
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname, resolve } from "node:path";
+import { EventLog } from "./events/log.js";
+import { watchCommand } from "./watch/command.js";
 import { loadConfig } from "./config.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
@@ -25,6 +27,7 @@ import {
 
 const COMMANDS: Record<string, string> = {
   "novel init <path>": "Create a novel workspace + bundle manifest",
+  "novel watch <novel-dir> [--port N]": "Read-only loopback SSE over the processing event log",
   "novel section <file>": "Deterministic sentence sectioning only (free, testable)",
   "novel blocks <file> [--size N]": "Chapter detection + block cutting map (no models)",
   "novel ingest <file>": "Section -> miniloop -> extract -> ChangeSet (merge gate)",
@@ -80,6 +83,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (cmd === "watch") {
+    await watchCommand(positional.slice(1));
+    return;
+  }
+
   if (cmd === "section" && sub) {
     const text = await readFile(sub, "utf8");
     const { sentences, paragraphCount } = sectionBlock(text, 0);
@@ -113,7 +121,7 @@ async function main(): Promise<void> {
   if (cmd === "graph" && sub === "build" && positional[2]) {
     const bundleDir = positional[2];
     const dbPath = positional[3] ?? join(bundleDir, "graph.lbug");
-    const counts = await buildGraphFromBundle(bundleDir, dbPath);
+    const counts = await buildGraphFromBundle(bundleDir, dbPath, new EventLog(dirname(resolve(bundleDir))).emit);
     out({ status: "built", bundleDir, dbPath, counts }, pretty);
     return;
   }
@@ -176,10 +184,11 @@ async function main(): Promise<void> {
       const ontologyDir = join(novelDir, "ontology");
       let cs = await setChangeSetStatus(novelDir, id, "approved");
       const bundle = new BundleStore(ontologyDir);
-      const { applied } = await applyChangeSet(bundle, cs);
+      const { applied } = await applyChangeSet(bundle, cs, new EventLog(novelDir).emit);
       const counts = await buildGraphFromBundle(
         ontologyDir,
         join(ontologyDir, "graph.lbug"),
+        new EventLog(novelDir).emit,
       );
       cs = await loadChangeSet(novelDir, id);
       out(
