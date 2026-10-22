@@ -12,6 +12,14 @@ import { join, dirname, resolve } from "node:path";
 import { EventLog } from "./events/log.js";
 import { watchCommand } from "./watch/command.js";
 import { loadConfig } from "./config.js";
+import {
+  novelQuery,
+  novelSearch,
+  timelineList,
+  timelineShow,
+  DEFAULT_MIN_IMPORTANCE,
+  DEFAULT_SEARCH_LIMIT,
+} from "./commands/queryCommands.js";
 import { sectionBlock } from "./text/sectioning.js";
 import { cutBlocks } from "./text/blocks.js";
 import { initWorkspace } from "./workspace/init.js";
@@ -37,9 +45,11 @@ const COMMANDS: Record<string, string> = {
   "novel graph build <bundle-dir> [db-path]": "(Re)build the Ladybug store from the bundle",
   "novel graph query <db-path> <cypher>": "Raw Cypher against the Ladybug store",
   "novel graph stats <db-path>": "Node/relation counts per table",
-  "novel query <cypher>": "OntologyStore query (graph traversal)",
-  "novel search <text>": "Graph-first text search (Cypher CONTAINS scan)",
-  "novel timeline list|show": "Browse time points (chapter / event, by importance)",
+  "novel query <novel-dir> <cypher>": "OntologyStore query (graph traversal)",
+  "novel search <novel-dir> <text> [--limit N]":
+    "Graph-first text search (Cypher CONTAINS scan)",
+  "novel timeline list|show <novel-dir> [timeline-id]":
+    "Browse timelines / time points (chapter / event, by importance)",
   "novel fork create --at <event-id> --label <name>": "Fork a parallel universe at a time point",
   "novel simulate <character> [--branch <id>]": "Character simulation on canon or a branch",
   "novel bundle export <novel-dir> <out-dir>":
@@ -57,6 +67,16 @@ function out(obj: unknown, pretty: boolean): void {
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
   return i >= 0 && i + 1 < args.length ? args[i + 1] : undefined;
+}
+
+/** Join the remaining args into one string, skipping flags and their values. */
+function restText(args: string[], flagsWithValues: string[]): string {
+  const kept: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (flagsWithValues.includes(args[i])) i++;
+    else kept.push(args[i]);
+  }
+  return kept.join(" ");
 }
 
 async function main(): Promise<void> {
@@ -208,6 +228,63 @@ async function main(): Promise<void> {
   if (cmd === "bundle" && sub === "import" && positional[2] && positional[3]) {
     const result = await importBundle(positional[2], positional[3]);
     out({ status: "imported", ...result }, pretty);
+    return;
+  }
+
+  if (cmd === "query") {
+    const novelDir = positional[1];
+    const cypher = positional.slice(2).join(" ");
+    if (!novelDir || !cypher) {
+      throw new Error("Usage: novel query <novel-dir> <cypher>");
+    }
+    out(await novelQuery(novelDir, cypher), pretty);
+    return;
+  }
+
+  if (cmd === "search") {
+    const novelDir = positional[1];
+    const text = restText(positional.slice(2), ["--limit"]);
+    if (!novelDir || !text) {
+      throw new Error("Usage: novel search <novel-dir> <text> [--limit N]");
+    }
+    const rawLimit = flag(positional, "--limit");
+    const limit =
+      rawLimit === undefined ? DEFAULT_SEARCH_LIMIT : Number(rawLimit);
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new Error(
+        `novel search --limit must be a positive integer (got: ${rawLimit})`,
+      );
+    }
+    out(await novelSearch(novelDir, text, limit), pretty);
+    return;
+  }
+
+  if (cmd === "timeline" && (sub === "list" || sub === "show")) {
+    const novelDir = positional[2];
+    if (!novelDir) {
+      throw new Error(
+        "Usage: novel timeline list|show <novel-dir> [timeline-id]",
+      );
+    }
+    if (sub === "list") {
+      out(await timelineList(novelDir), pretty);
+      return;
+    }
+    const timelineId = positional[3];
+    if (!timelineId || timelineId.startsWith("--")) {
+      throw new Error(
+        "Usage: novel timeline show <novel-dir> <timeline-id> [--min-importance N]",
+      );
+    }
+    const rawMin = flag(positional, "--min-importance");
+    const minImportance =
+      rawMin === undefined ? DEFAULT_MIN_IMPORTANCE : Number(rawMin);
+    if (!Number.isFinite(minImportance) || minImportance < 0 || minImportance > 1) {
+      throw new Error(
+        `novel timeline show --min-importance must be a number between 0 and 1 (got: ${rawMin})`,
+      );
+    }
+    out(await timelineShow(novelDir, timelineId, minImportance), pretty);
     return;
   }
 

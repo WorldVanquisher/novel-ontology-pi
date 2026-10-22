@@ -181,9 +181,11 @@ novel ingest <file>                section → miniloop → extract → ChangeSe
 novel miniloop run|inspect         run the Jev loop; inspect decisions
 novel changeset list|show|approve|hold|revise
                                    the merge gate
-novel query <cypher>               graph traversal via OntologyStore
-novel search <text>                hybrid FTS + vector seed search
-novel timeline list|show           browse fork points by importance
+novel query <novel-dir> <cypher>   graph traversal via OntologyStore
+novel search <novel-dir> <text>    graph-first text search (CONTAINS scan;
+                                   FTS + vector deferred, §9)
+novel timeline list|show <novel-dir> [id]
+                                   browse fork points by importance
 novel fork create --at <event-id> --label <name>
 novel simulate <character> [--branch <id>]
 novel bundle export|import         portable ontology in / out
