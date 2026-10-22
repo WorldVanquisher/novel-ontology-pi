@@ -7,10 +7,10 @@ export interface FeedEntry {
 }
 
 const TONE_COLOR: Record<FeedEntry["tone"], string> = {
-  plain: "#9aa7bd",
-  jev: "#a78bfa",
-  warn: "#fbbf24",
-  ok: "#34d399",
+  plain: "var(--dim)",
+  jev: "var(--branch)",
+  warn: "var(--amber)",
+  ok: "var(--olive)",
 };
 
 export function DecisionFeed({ entries }: { entries: FeedEntry[] }) {
