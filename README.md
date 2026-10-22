@@ -108,6 +108,28 @@ skip. Transient failures (5xx, network) are retried with backoff;
 are plumbing only — the client is **not** wired into `ingest` yet;
 that step lands separately, with live keys.
 
+## Jev key management: `jev login` / `status` / `logout` / `ping`
+
+The CLI keeps its own durable secret store for the decision-model
+key, so the key does not have to live in the environment:
+
+```bash
+node dist/src/cli.js jev login            # hidden prompt; stores the key (file mode 0600, outside the repo)
+node dist/src/cli.js jev login --from-env # copy TYPESAFE_API_KEY into the store instead
+node dist/src/cli.js jev status           # source only: env / store / env-indirect / missing
+node dist/src/cli.js jev logout           # remove the stored copy
+node dist/src/cli.js jev ping  --pretty   # one tiny live decision through the resolved key
+```
+
+Resolution order (the same one open-source Jev integrations use):
+`TYPESAFE_API_KEY` env → the secure store → the env var named by
+`JEV_API_KEY_ENV`. The store lives under `~/.config/novel-ontology/`
+(`NOVEL_SECRETS_DIR` overrides it), never inside a novel bundle, and
+no command ever prints the key. The live client speaks the real
+System One wire format with the model pinned (`JEV_MODEL`, default
+`jev-1.13.0`); transient failures (429/529/5xx, network) retry with
+backoff, other 4xx fail at once.
+
 ## Sharing a novel: bundle export / import
 
 The JSONL bundle is the source of truth, so sharing a novel = moving the

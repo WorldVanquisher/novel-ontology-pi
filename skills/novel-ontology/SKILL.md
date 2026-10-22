@@ -21,6 +21,12 @@ in plain language.
 - `novel llm ping|probe` smoke-test the work-LLM plumbing (reachability,
   JSON mode) without ingesting anything; `WORK_LLM_BASE_URL` can point
   them at a local mock server so they cost nothing.
+- The Jev key has its own secure store in the CLI: `novel jev login`
+  (hidden prompt), `jev status` (source only, never the value),
+  `jev logout`, `jev ping` (one live decision). Resolution order:
+  `TYPESAFE_API_KEY` env → secure store → `JEV_API_KEY_ENV`
+  indirection. If `novel config` reports the Jev key missing, point
+  the user at `novel jev login`; never ask for the key in chat.
 
 ## Workflow 1 — Ingest a novel (the merge gate is yours)
 

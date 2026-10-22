@@ -1,5 +1,6 @@
 /**
- * Model-routing configuration — read from the environment only.
+ * Model-routing configuration — read from the environment, plus the
+ * Jev key's secure-store resolution (src/connectors/secrets.ts).
  *
  * The user provides TWO APIs (see .env.example and DESIGN.md §1):
  * one work LLM (generation/extraction) and one decision model (Jev).
@@ -9,6 +10,15 @@
  */
 
 export type KeyStatus = "configured" | "missing";
+
+export interface ConfigOptions {
+  /**
+   * A Jev key resolved outside the plain environment (the durable
+   * secret store or the JEV_API_KEY_ENV indirection, see
+   * src/connectors/secrets.ts). Presence only — never the value.
+   */
+  jevKeySource?: "store" | "env-indirect" | null;
+}
 
 export interface ConfigReport {
   workLlm: {
@@ -26,6 +36,8 @@ export interface ConfigReport {
     model: string;
     apiKey: KeyStatus;
     apiKeyEnv: "TYPESAFE_API_KEY";
+    /** Where the key resolves from, when configured: env, the durable secret store, or the JEV_API_KEY_ENV indirection. */
+    apiKeySource: "env" | "store" | "env-indirect" | null;
   };
   embeddings: {
     /** Deferred by decision (DESIGN.md §9): graph-first retrieval. */
@@ -50,9 +62,16 @@ const WORK_LLM_DEFAULT_BASE_URLS: Record<string, string> = {
   openai: "https://api.openai.com/v1",
 };
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigReport {
+export function loadConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  opts: ConfigOptions = {},
+): ConfigReport {
   const workKey = nonEmpty(env.WORK_LLM_API_KEY);
-  const jevKey = nonEmpty(env.TYPESAFE_API_KEY);
+  const jevEnvKey = nonEmpty(env.TYPESAFE_API_KEY);
+  const jevKeySource: "env" | "store" | "env-indirect" | null = jevEnvKey
+    ? "env"
+    : (opts.jevKeySource ?? null);
+  const jevKey = jevEnvKey ?? (jevKeySource ? "resolved" : null);
 
   const missingForLiveIngest: string[] = [];
   if (!workKey) missingForLiveIngest.push("WORK_LLM_API_KEY");
@@ -80,6 +99,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigReport {
       model: nonEmpty(env.JEV_MODEL) ?? "jev-1.13.0",
       apiKey: jevKey ? "configured" : "missing",
       apiKeyEnv: "TYPESAFE_API_KEY",
+      apiKeySource: jevKey ? jevKeySource : null,
     },
     embeddings: {
       status: "deferred",
